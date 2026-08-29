@@ -1,0 +1,219 @@
+# Timbre — Engineering Design Document
+
+This document is the **executable specification** for the Timbre engineering project. It
+complements `AGENTS.md` (the what/why) with the how: concrete module boundaries, data flows,
+interfaces, and operational details. When code lands, this doc must stay reconciled with the
+actual repository — treat discrepancies as bugs and fix the more correct side.
+
+---
+
+## 1. Project layout
+
+```
+Timbre/
+├── pyproject.toml            # build config, deps, tool config (ruff, pytest)
+├── Makefile                  # one-stop dev commands (see §9)
+├── .env.example              # required env vars (copy to .env, never commit)
+├── .gitignore
+├── README.md
+├── AGENTS.md                 # agent instruction file (source of truth for design)
+├── DESIGN.md                 # this file
+├── docs/                     # report + research notes (markdown)
+├── data/                     # gitignored
+│   ├── raw/                  # downloaded datasets (RAVDESS, CREMA-D, TESS)
+│   ├── processed/            # extracted feature arrays per clip (.npz)
+│   └── splits/               # seeded train/val/test index files (.json)
+├── models/                   # gitignored; serialized pipeline artifacts (.joblib/.pkl)
+├── experiments/              # reproducible run logs, notebooks, ablation outputs
+├── src/timbre/               # the Python package (see §2)
+├── frontend/                 # static HTML/JS app (mic + mood graph)
+├── scripts/                  # top-level CLI entrypoints (download, train, evaluate, serve)
+└── tests/                    # pytest suite
+```
+
+## 2. Python package — `src/timbre/`
+
+Each submodule maps to a pipeline stage. The **perception core** (stages that are the
+student's own ML contribution) is explicitly separated from **glue** (off-the-shelf LLM/TTS).
+
+| Module | Pipeline stage | Ownership | Responsibility |
+|--------|----------------|-----------|----------------|
+| `features/` | 1 | **Built by me** | framewise feature extraction (F0, RMS, MFCCs, speaking rate) |
+| `reduction/` | 2 | **Built by me** | PCA + LLE dimensionality reduction, fit/transform |
+| `hmm/` | 3 | **Built by me** | HMM (emission/transition) + hand-written Viterbi decoder |
+| `bayesian/` | 4 | **Built by me** | MCMC/VI posterior over emotion states + credible intervals |
+| `glue/` | 5–7 | off-the-shelf | LLM prompt injection + TTS API + mood log persistence |
+| `api/` | — | glue | FastAPI app: streaming endpoint, /health, /emotion, model loading |
+| `core/` | — | shared | types/dataclasses shared across stages (FeatureFrame, EmotionState) |
+| `eval/` | — | **Built by me** | accuracy, confusion matrix, calibration, ablations |
+| `utils/` | — | shared | paths, config loading, logging, seeds |
+
+Rules:
+- `features`, `reduction`, `hmm`, `bayesian`, `eval` contain **no API/network calls** — pure
+  computation, fully unit-testable.
+- `glue` and `api` may call external services but must **never** import-claim them as research.
+- Every public function in the "built by me" modules carries a leading docstring noting whether
+  it is hand-implemented or wraps a library.
+
+## 3. Core data model (shared types)
+
+`src/timbre/core/types.py`:
+
+- `FrameFeatures`: a single frame's feature vector (np.ndarray) + timestamp.
+- `Clip`: raw audio path + parsed emotion label + feature matrix (nframes × nfeatures).
+- `FeatureSequence`: a clip's framewise feature matrix + frame metadata.
+- `EmotionState`: enum of the 8 RAVDESS emotions + unknown.
+- `EmotionPosterior`: dict[EmotionState, probability] + credible interval per state.
+- `SessionLogPoint`: timestamp + posterior → consumed by mood-graph logger.
+
+## 4. Data pipeline
+
+### 4.1 Sources
+| Dataset | Use | Size | Emotion encoding |
+|---------|-----|------|------------------|
+| RAVDESS | train/val (primary) | ~1,440 clips | 3rd filename field (01=sad … 08=surprised) |
+| TESS | quick POC | ~2,800 | folder/name prefix |
+| CREMA-D | cross-dataset generalization | ~7,442 | filename token |
+
+Emotion label must be **parsed from filenames** — never from folder placement assumptions.
+
+### 4.2 Feature extraction (frame semantics)
+- Window: **25 ms**; stride: **10 ms** (defaults; configurable in config `feature`).
+- Per frame: **F0/pitch** (`librosa.pyin`), **RMS energy**, **MFCCs (13–20 coeffs)**,
+  **VAD-derived speaking rate** (silence ratio over a sliding window).
+- Output: one `FeatureSequence` per clip, written to `data/processed/<dataset>/<id>.npz`
+  as `{"features": (nframes, nf), "sr": int, "label": int}`.
+
+### 4.3 Train/val/test split
+- **Deterministic, seeded, and speaker-independent** (SEED in config, default 42). Assign each
+  RAVDESS actor wholly to train, validation, or test; never split at frame level or allow an
+  actor to cross partitions.
+- INDEX files: `data/splits/ravdess_train.json` etc. — lists of clip ids + labels.
+- Personal/native-language test set lives as its own split json and is excluded from training.
+
+### 4.4 Repro wiring
+- `scripts/download_data.py` — downloads RAVDESS (Zenodo) / TESS / CREMA-D, verifies hashes.
+- `scripts/extract_features.py` — reads raw → writes `data/processed`.
+- `scripts/make_splits.py` — writes `data/splits/*.json` with the fixed seed.
+- A `Makefile` target chains them in order. **Do not run extraction on raw audio more than
+  once** — the processed `.npz` cache is the source for all downstream training.
+
+## 5. Perception pipeline (built by me)
+
+### 5.1 Reduction (`reduction/`)
+- `fit_reduction(features, method=pca|lle, n_components)` → artifact.
+- Standardize Hz, energy, MFCC, and ratio columns with `StandardScaler`, then fit PCA on
+  **concatenated training frames** only (never on validation/test frames) — leakage guard.
+- LLE: `sklearn.manifold.LocallyLinearEmbedding`; compare separation in report.
+- Store fitted object in `models/` for reuse at inference.
+
+### 5.2 HMM + Viterbi (`hmm/`)
+- Fit one Gaussian HMM per emotion with `hmmlearn` (Baum-Welch). Each HMM's hidden states are
+  acoustic regimes within that emotion, not the eight emotion labels.
+- **`viterbi.py` — fully hand-written Viterbi decoder** (`argmax` over log-probs with
+  backpointers). This is the graded inference contribution; no library call in this file.
+- API: `decode(features_2d, model) -> (states_seq, log_score)`. Classification compares the
+  hand-written Viterbi best-path score from every emotion model after dividing by frame count;
+  forward likelihood remains an evaluation ablation.
+- Design note (known research caveat): "one HMM per emotion class" is effectively N separate
+  sequence classifiers. Document this modeling choice explicitly in `docs/report.md`; if time
+  permits, implement a single HMM with 8 latent states as an ablation.
+
+### 5.3 Bayesian uncertainty (`bayesian/`)
+- On top of HMM (log-)likelihoods, estimate a **posterior distribution over emotion states**
+  rather than a single argmax.
+- Implementation options, in order of preference given real-time constraints:
+  1. **Hybrid**: closed-form Gaussian posterior over emission params (fast), 2. **VI** with a
+     mean-field surrogate (recommended middle ground), 3. **MCMC/Gibbs** (full rigor, slow —
+     batch/offline only, not real-time).
+- Output: `EmotionPosterior` with per-state probability **and credible intervals**.
+- **Real-time mandate**: streaming inference must stay under a latency budget (see §7). If
+  MCMC exceeds it, ship the VI path in `api` and keep MCMC as an offline eval artifact.
+
+## 6. Evaluation (`eval/`)
+Hand-written scoring + visualizations, all deterministic:
+- Accuracy & balanced accuracy (8-class).
+- **Confusion matrix** (which emotion pairs confound).
+- **Calibration curve**: bin predicted confidence vs. actual correctness; report expected
+  calibration error (ECE). This is the "does 72% ≈ 72%?" test.
+- **Ablations**: PCA vs. LLE; ±Bayesian layer; ±Kalman smoothing; HMM vs. logistic-regression
+  vs. random-forest baselines.
+- Script: `scripts/evaluate.py` → writes figures + metrics into `experiments/<run>/`.
+
+## 7. Backend & inference (`api/` + `glue/`)
+
+### 7.1 FastAPI app (`api/main.py`)
+Endpoints:
+- `POST /api/inference` — accepts audio chunk (raw PCM or WAV), runs
+  features → reduction → HMM → Bayesian, returns `EmotionPosterior`.
+- `POST /api/chat` — takes posterior + user text → injects prompt → returns LLM reply + TTS URL.
+- `GET /api/health` — model loaded? version? latency stats.
+
+### 7.2 Streaming / latency contract
+- Browser sends audio chunks; backend buffers a **sliding window** (config `inference.window_ms`,
+  default ~2000 ms). Inference runs on the window.
+- Latency budget: **< ~300 ms** end-to-end for perception. If PCA+HMM+VI exceeds it, reduce
+  window, trim MFCC count, or downsample frames before decode.
+- HMM/Viterbi state **resets at utterance boundaries** (detected by VAD/silence) — documented
+  decision so the sequence model doesn't carry state across turns.
+
+### 7.3 LLM/TTS glue (`glue/`)
+- `prompt.py`: builds system prompt from `EmotionPosterior` (e.g. "user sounds stressed 72%").
+- `companion.py`: calls OpenAI first, with optional Gemini fallback. **Marked
+  `# EXTERNAL SERVICE`**.
+- `tts.py`: calls external TTS API; may slow speaking rate under stress (conversational mirroring).
+- `mood_logger.py`: appends `SessionLogPoint` to a session store (JSON/DB) for the graph.
+- **API keys**: read from environment via `utils/config.py`. Never hardcode or commit.
+
+## 8. Frontend (`frontend/`)
+- `index.html` + `app.js` + `style.css` — single-page app, no build step.
+- Browser mic via `getUserMedia()`; `MediaRecorder` → blob → POST chunk to `/api/inference`.
+- Renders reply from `/api/chat` and plays TTS audio.
+- **Mood graph**: Chart.js or Plotly line/area chart — X = conversation turns, Y = emotion
+  probability, confidence-interval bands. Fed by `/api/inference` responses.
+- Served from FastAPI static mount (no separate dev server) for demo simplicity.
+
+## 9. Developer commands (Makefile)
+```make
+setup        # python -m venv .venv && pip install -e ".[dev]"
+data-download # scripts/download_data.py
+data-extract  # scripts/extract_features.py
+data-split    # scripts/make_splits.py
+train         # scripts/train.py            -> models/
+evaluate      # scripts/evaluate.py          -> experiments/<run>/
+serve         # uvicorn timbre.api.main:app  (serves frontend too)
+lint          # ruff check .
+typecheck     # (none yet; optionally mypy)
+test          # pytest -q
+ci            # lint && test
+```
+All commands run from repo root. Python 3.10+.
+
+## 10. Env / config
+- `.env` (from `.env.example`): `RAVDESS_URL`, `CREMA_URL`, `TESS_URL`, `OPENAI_API_KEY`,
+  optional `GEMINI_API_KEY`, provider model names, `TTS_API_KEY`, `TTS_VOICE_ID`, `SEED`,
+  `LOG_LEVEL`.
+- All defaults in `src/timbre/utils/config.py` (pydantic-settings); overridable via env.
+- `.gitignore`: `data/`, `models/`, `.env`, `*.npz`, `*.wav`, `*.joblib`, `experiments/`,
+  `.venv/`, `__pycache__/`.
+
+## 11. Reproducibility rules
+- **Seed everything** (feature extraction, split, PCA, HMM init, baselines).
+- Never fit reduction or scalers on test/val frames.
+- Cache processed features; never recompute raw → features in training/eval scripts.
+- Every experiment records: seed, config snapshot, dataset split json hash, commit hash →
+  `experiments/<run>/manifest.json`.
+
+## 12. Testing strategy
+- `tests/test_features.py` — known-signal synthetic clips → expected feature ranges.
+- `tests/test_viterbi.py` — hand-computed tiny HMM → assert exact best-path (the proof the
+  hand-written decoder is correct).
+- `tests/test_reduction.py` — PCA/LLE transform shapes; no-leakage guard.
+- `tests/test_bayesian.py` — posterior sums to 1; intervals shrink with more frames.
+- `tests/test_eval.py` — calibration/ECE on synthetic well-calibrated data → near-zero ECE.
+
+## 13. Known research caveats (to document, not hide)
+1. Per-emotion HMM == N sequence classifiers (single-8-state-HMM ablation planned).
+2. RAVDESS is acted/English; cross-lingual transfer drops — expected, report honestly.
+3. Real-time MCMC is hard → VI primary, MCMC offline.
+4. 65–75% target: reasonable for classical methods; never chase ~100%.

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0a0a0f" />
+  <meta name="description" content="Timbre — an emotion-aware voice companion" />
+  <title>Timbre</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <!-- Ambient gradient background -->
+    <div class="bg-glow" aria-hidden="true"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">T</div>
+        <span class="brand-name">Timbre</span>
+      </div>
+
+      <nav class="nav">
+        <a class="nav-item active" href="#session">
+          <span class="nav-icon">◉</span> Live Session
+        </a>
+        <a class="nav-item" href="#history">
+          <span class="nav-icon">▤</span> History
+        </a>
+        <a class="nav-item" href="#settings">
+          <span class="nav-icon">⚙</span> Settings
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="service-status">
+          <span id="statusDot" class="dot"></span>
+          <span id="statusText">Connecting…</span>
+        </div>
+        <div class="service-detail" id="statusDetail">service status</div>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="content">
+      <!-- Header bar -->
+      <header class="topbar">
+        <div>
+          <h1 class="page-title">Live Session</h1>
+          <p class="page-sub">Real-time emotional perception from your voice</p>
+        </div>
+        <div class="topbar-actions">
+          <span class="model-chip">Perception Engine v0.1</span>
+          <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">◐</button>
+        </div>
+      </header>
+
+      <!-- Mic row -->
+      <section class="mic-section">
+        <button class="mic-btn" id="micBtn" aria-label="Start listening">
+          <span class="mic-badge" id="micBadge" aria-hidden="true"></span>
+          <span class="mic-halo" aria-hidden="true"></span>
+          <span class="mic-icon" id="micIcon" aria-hidden="true">●</span>
+        </button>
+        <div class="mic-copy">
+          <h2 class="mic-state" id="micState">Ready to listen</h2>
+          <p class="mic-hint" id="micHint">Tap to grant microphone access and begin a live perception session.</p>
+        </div>
+      </section>
+
+      <!-- Dashboard grid -->
+      <div class="grid">
+        <!-- Emotion card -->
+        <section class="card emotion-card">
+          <div class="card-head">
+            <h3 class="card-title">Detected Emotion</h3>
+            <span class="card-badge live-badge" id="liveBadge">● LIVE</span>
+          </div>
+          <div class="emotion-body">
+            <div class="ring-wrap">
+              <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+                <circle class="ring-bg" cx="60" cy="60" r="52" />
+                <circle class="ring-fg" id="ringFg" cx="60" cy="60" r="52" />
+              </svg>
+              <div class="ring-center">
+                <span class="ring-pct" id="confidencePct">—</span>
+                <span class="ring-caption">confidence</span>
+              </div>
+            </div>
+            <div class="emotion-meta">
+              <div class="emotion-label-row">
+                <span class="emotion-icon" id="emotionIcon" aria-hidden="true">◌</span>
+                <span class="emotion-label" id="emotionLabel">—</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">Credible interval</span>
+                <span class="meta-val" id="intervalEl">± —</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">Turns analysed</span>
+                <span class="meta-val" id="turnEl">0</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">Audio window</span>
+                <span class="meta-val" id="windowEl">—</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Mood graph card -->
+        <section class="card graph-card">
+          <div class="card-head">
+            <h3 class="card-title">Emotion Trajectory</h3>
+            <span class="card-badge">live</span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="moodChart"></canvas>
+          </div>
+        </section>
+      </div>
+
+      <!-- Chat card -->
+      <section class="card chat-card" id="session">
+        <div class="card-head">
+          <h3 class="card-title">Companion Dialogue</h3>
+          <span class="card-badge" id="chatState">idle</span>
+        </div>
+        <div class="chat-log" id="log" aria-live="polite">
+          <div class="chat-empty" id="chatEmpty">
+            <span class="chat-empty-mark">◎</span>
+            <p>Start a session and the companion will respond based on your emotional state.</p>
+          </div>
+        </div>
+        <form class="chat-form" id="chatForm">
+          <input class="chat-input" id="userText" type="text" placeholder="Message Timbre…" autocomplete="off" />
+          <button class="send-btn" id="sendBtn" type="submit" disabled aria-label="Send">
+            <span class="send-arrow">↗</span>
+          </button>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
