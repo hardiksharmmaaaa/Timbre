@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+build/
+dist/
+
+# Data & models (large, reproducible)
+data/raw/
+data/processed/
+data/splits/
+models/
+experiments/
+
+# Secrets
+.env
+
+# Media
+*.wav
+*.mp3
+*.npz
+*.joblib
+*.pkl
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.DS_Store
