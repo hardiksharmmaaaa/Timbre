@@ -2,16 +2,10 @@
 (function () {
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const nav = document.getElementById("siteNav");
-  const glow = document.getElementById("cursorGlow");
 
   window.addEventListener("scroll", () => nav?.classList.toggle("scrolled", scrollY > 40), {
     passive: true,
   });
-  window.addEventListener("pointermove", (event) => {
-    if (!glow) return;
-    glow.style.left = `${event.clientX}px`;
-    glow.style.top = `${event.clientY}px`;
-  }, { passive: true });
 
   const tones = ["steady?", "hesitant?", "bright?", "strained?"];
   const tone = document.getElementById("quoteTone");
@@ -20,11 +14,11 @@
     if (!tone) return;
     toneIndex = (toneIndex + 1) % tones.length;
     tone.textContent = tones[toneIndex];
-  }, 1700);
+  }, 2400);
 
   if (window.gsap) {
     window.gsap.registerPlugin(window.ScrollTrigger);
-    window.gsap.set(".hero-reveal", { y: 55, opacity: 0 });
+    window.gsap.set(".hero-reveal", { y: 30, opacity: 0 });
     window.gsap.to(".hero-reveal", {
       y: 0,
       opacity: 1,
@@ -35,7 +29,7 @@
     });
     window.gsap.utils.toArray(".reveal").forEach((element) => {
       window.gsap.from(element, {
-        y: reducedMotion ? 0 : 70,
+        y: reducedMotion ? 0 : 36,
         opacity: 0,
         duration: 1,
         ease: "power3.out",
@@ -43,31 +37,13 @@
       });
     });
     if (!reducedMotion) {
-      window.gsap.to(".hero-copy", {
-        yPercent: 22,
-        opacity: 0.2,
-        ease: "none",
-        scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true },
-      });
       window.gsap.fromTo(".quote-wave i", { scaleY: 0.1 }, {
         scaleY: 1,
         stagger: 0.04,
         ease: "sine.inOut",
-        scrollTrigger: { trigger: ".voice-quote", start: "top 80%", end: "bottom 30%", scrub: 1 },
+        scrollTrigger: { trigger: ".voice-stage", start: "top 80%", end: "bottom 30%", scrub: 1 },
       });
     }
-  }
-
-  if (!reducedMotion) {
-    document.querySelectorAll(".magnetic").forEach((element) => {
-      element.addEventListener("pointermove", (event) => {
-        const box = element.getBoundingClientRect();
-        const x = (event.clientX - box.left - box.width / 2) * 0.12;
-        const y = (event.clientY - box.top - box.height / 2) * 0.12;
-        element.style.transform = `translate(${x}px, ${y}px)`;
-      });
-      element.addEventListener("pointerleave", () => { element.style.transform = ""; });
-    });
   }
 
   function createSignalScene() {
@@ -103,7 +79,7 @@
     scene.add(shell);
 
     const starsGeometry = new THREE.BufferGeometry();
-    const stars = new Float32Array(450 * 3);
+    const stars = new Float32Array(260 * 3);
     for (let i = 0; i < stars.length; i += 3) {
       stars[i] = (Math.random() - 0.5) * 16;
       stars[i + 1] = (Math.random() - 0.5) * 10;
@@ -120,7 +96,16 @@
       pointer.y = event.clientY / innerHeight - 0.5;
     }, { passive: true });
     const clock = new THREE.Clock();
+    let heroVisible = true;
+    const visibilityObserver = new IntersectionObserver(([entry]) => {
+      heroVisible = entry.isIntersecting;
+    }, { threshold: 0.01 });
+    visibilityObserver.observe(canvas);
     function render() {
+      if (!heroVisible || document.hidden) {
+        requestAnimationFrame(render);
+        return;
+      }
       const time = clock.getElapsedTime();
       const positions = geometry.attributes.position.array;
       for (let i = 0; i < positions.length; i += 3) {
@@ -143,44 +128,11 @@
     window.addEventListener("resize", () => {
       camera.aspect = innerWidth / innerHeight;
       camera.updateProjectionMatrix();
+      signal.position.x = innerWidth < 800 ? 1.4 : 2.45;
+      shell.position.copy(signal.position);
       renderer.setSize(innerWidth, innerHeight);
     });
   }
 
-  function drawClosingSignal() {
-    const canvas = document.getElementById("closingScene");
-    if (!canvas) return;
-    const context = canvas.getContext("2d");
-    let width; let height; let frame = 0;
-    const resize = () => {
-      width = canvas.width = canvas.clientWidth * Math.min(devicePixelRatio, 2);
-      height = canvas.height = canvas.clientHeight * Math.min(devicePixelRatio, 2);
-    };
-    resize();
-    function render() {
-      context.clearRect(0, 0, width, height);
-      context.beginPath();
-      for (let x = 0; x <= width; x += 5) {
-        const envelope = Math.sin(Math.PI * x / width);
-        const y = height * 0.52 + Math.sin(x * 0.018 + frame * 0.018) * height * 0.08 * envelope
-          + Math.sin(x * 0.006 - frame * 0.011) * height * 0.12 * envelope;
-        if (x === 0) context.moveTo(x, y); else context.lineTo(x, y);
-      }
-      const gradient = context.createLinearGradient(0, 0, width, 0);
-      gradient.addColorStop(0, "rgba(123,97,255,0)");
-      gradient.addColorStop(0.42, "rgba(123,97,255,.20)");
-      gradient.addColorStop(0.7, "rgba(255,92,26,.32)");
-      gradient.addColorStop(1, "rgba(255,92,26,0)");
-      context.strokeStyle = gradient;
-      context.lineWidth = Math.max(1, devicePixelRatio);
-      context.stroke();
-      frame += 1;
-      if (!reducedMotion) requestAnimationFrame(render);
-    }
-    render();
-    window.addEventListener("resize", resize);
-  }
-
   createSignalScene();
-  drawClosingSignal();
 }());

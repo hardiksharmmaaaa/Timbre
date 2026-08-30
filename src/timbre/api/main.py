@@ -70,46 +70,46 @@ def posterior_from_payload(
 # Demo reply templates keyed by emotion (used when no LLM key is set).
 DEMO_REPLIES: dict[str, list[str]] = {
     "neutral": [
-        "You sound composed right now. What's on your mind?",
-        "You seem pretty relaxed. Anything you'd like to talk about?",
-        "Your tone sounds steady — nice. What can I help with?",
+        "I'm here. What's on your mind?",
+        "Take your time—what would you like to talk through?",
+        "What would be useful to explore together?",
     ],
     "calm": [
-        "You're in a calm headspace — let's keep that going. What's next?",
-        "Nice, calm energy. What would you like to explore?",
-        "Good vibes — I'll keep it steady too.",
+        "I'll keep the pace steady. What would you like to explore?",
+        "Where would you like to begin?",
+        "We can take this one step at a time. What's next?",
     ],
     "happy": [
-        "You're sounding upbeat! Love the energy. What's making you happy?",
-        "That positive tone is coming through. Let's build on it!",
-        "Happiness detected — what's going well today?",
+        "That sounds worth exploring—tell me more.",
+        "What part of this feels most important to you?",
+        "Let's build on that. What would you like to do next?",
     ],
     "sad": [
-        "I hear a heavier tone in your voice. Want to talk about what's weighing on you?",
-        "Your voice sounds a bit down. I'm here if you want to share.",
-        "I can tell things might be tough right now. Take your time.",
+        "We can take this slowly. Would you like to say more?",
+        "I'm here if you want to talk it through.",
+        "Take your time—there's no need to rush your answer.",
     ],
     "angry": [
-        "Your voice sounds tense. Let's take a breath together — what's frustrating you?",
-        "I'm picking up frustration. Want to walk me through what happened?",
-        "Let's slow down. What's making you upset?",
+        "Let's slow this down and look at what happened.",
+        "Would it help to walk through the situation one part at a time?",
+        "What outcome would feel most useful right now?",
     ],
     "fearful": [
-        "There's some nervousness in your tone. Want to talk through what's worrying you?",
-        "You sound a bit anxious. That's okay — let's figure this out together.",
-        "I can hear the concern. What's causing it?",
+        "We can make this more concrete. What feels unclear right now?",
+        "Let's take it one step at a time. Where should we start?",
+        "Would a short list of options help?",
     ],
     "disgust": [
-        "Your tone suggests something rubbed you the wrong way. Want to unpack that?",
-        "That sounds like it left a bad taste. What happened?",
+        "Would you like to unpack what happened?",
+        "What part of the situation should we look at first?",
     ],
     "surprised": [
-        "Wow, that sounds unexpected! Tell me more.",
-        "I hear surprise — what caught you off guard?",
+        "That sounds unexpected. What changed?",
+        "Tell me more about what happened.",
     ],
     "unknown": [
-        "I'm still getting a read on your voice. Say something and I'll tune in.",
-        "Let me try to pick up your tone — keep talking.",
+        "I'm here. What would you like to talk about?",
+        "Where would you like to begin?",
     ],
 }
 

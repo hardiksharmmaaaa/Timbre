@@ -11,8 +11,9 @@ from timbre.core.types import EmotionPosterior
 
 # EXTERNAL SERVICE: prompt templates.
 TEMPLATE = (
-    "The user currently sounds {emotion} ({confidence:.0%} confidence). "
-    "Adjust your tone: {guidance}"
+    "The vocal-affect model currently assigns {emotion} the highest probability "
+    "({confidence:.0%}). This is an uncertain acoustic estimate, not the user's verified "
+    "internal state. Do not tell the user how they feel. Adjust your tone subtly: {guidance}"
 )
 
 # Mapping of the most-likely state to conversational guidance. This is our design choice,
