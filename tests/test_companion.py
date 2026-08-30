@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import openai
 
+from timbre.core.types import EmotionPosterior, EmotionState
 from timbre.glue import companion
 from timbre.utils.config import settings
 
@@ -28,6 +29,16 @@ class FakeOpenAIClient:
 
     async def close(self):
         self.captured["openai_closed"] = True
+
+
+def test_system_prompt_preserves_uncertainty_boundary():
+    posterior = EmotionPosterior(probs={EmotionState.CALM: 0.7, EmotionState.SAD: 0.3})
+
+    prompt = companion.build_system_prompt(posterior)
+
+    assert "uncertain acoustic estimate" in prompt
+    assert "not the user's verified internal state" in prompt
+    assert "Do not tell the user how they feel" in prompt
 
 
 def test_llm_reply_prefers_openai(monkeypatch):
