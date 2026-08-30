@@ -53,7 +53,7 @@ let isListening = false;
 let live = false;
 
 /* ---- Mood graph ---- */
-const colors = ["#5eead4", "#7c9cff", "#fde68a", "#ffb454", "#ff6b6b", "#b7a3ff", "#f9a8d4", "#4ade80"];
+const colors = ["#f2f0ec", "#9d8cff", "#ff7a3d", "#6e8fff", "#ff4d4d", "#c987ff", "#d98265", "#ffd166"];
 const chartData = { labels: [], datasets: [] };
 const datasets = {};
 let chart = null;
@@ -69,23 +69,23 @@ function ensureChart() {
       interaction: { mode: "index", intersect: false },
       animation: { duration: 500, easing: "easeOutQuart" },
       plugins: {
-        legend: { labels: { color: "#a2a8b8", usePointStyle: true, pointStyle: "circle", boxWidth: 7, padding: 16, font: { size: 11 } } },
+        legend: { labels: { color: "#888a82", usePointStyle: true, pointStyle: "circle", boxWidth: 6, padding: 14, font: { family: "DM Mono", size: 9 } } },
         tooltip: {
-          backgroundColor: "rgba(14,16,23,0.9)",
-          borderColor: "rgba(255,255,255,0.1)",
+          backgroundColor: "rgba(12,13,11,0.94)",
+          borderColor: "rgba(255,92,26,0.22)",
           borderWidth: 1,
-          titleColor: "#f5f6fa",
-          bodyColor: "#a2a8b8",
+          titleColor: "#eeeade",
+          bodyColor: "#9d9f96",
           padding: 10,
           cornerRadius: 8,
         },
       },
       scales: {
-        x: { grid: { color: "rgba(255,255,255,0.04)" }, ticks: { color: "#6b7080", font: { size: 11 } }, title: { display: false } },
+        x: { grid: { color: "rgba(238,234,222,0.05)" }, ticks: { color: "#686a63", font: { family: "DM Mono", size: 9 } }, title: { display: false } },
         y: {
           min: 0, max: 1,
-          grid: { color: "rgba(255,255,255,0.04)" },
-          ticks: { color: "#6b7080", font: { size: 11 }, callback: (v) => v },
+          grid: { color: "rgba(238,234,222,0.05)" },
+          ticks: { color: "#686a63", font: { family: "DM Mono", size: 9 }, callback: (v) => v },
           title: { display: false },
         },
       },
@@ -109,7 +109,10 @@ async function pingHealth() {
       statusDetail.textContent = d.demo_mode
         ? `v${d.version} · demo mode (mock inference)`
         : `v${d.version} · model loaded`;
-      if (d.window_ms) windowEl.textContent = `${Math.round(d.window_ms / 1000)}s`;
+      if (d.window_ms) {
+        lastWindowMs = d.window_ms;
+        windowEl.textContent = `${Math.round(d.window_ms / 1000)}s`;
+      }
     } else setStatus(false);
   } catch (_) {
     setStatus(false);
@@ -222,7 +225,6 @@ async function toggleMic() {
   }
   try {
     micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    lastWindowMs = 2000;
     isListening = true;
     recordSegment();
     micBtn.classList.add("listening");
@@ -230,10 +232,10 @@ async function toggleMic() {
     micIcon.style.color = "#06231f";
     liveBadge.textContent = "● LIVE";
     liveBadge.classList.add("live-badge");
-    micState.textContent = "Listening — Pearl of your voice";
+    micState.textContent = "Listening to the shape of your voice";
     micState.classList.add("listening");
-    micHint.textContent = "Speak now. Emotion is sampled every two seconds.";
-    windowEl.textContent = "2s";
+    micHint.textContent = `Speak naturally. Timbre samples a ${Math.round(lastWindowMs / 1000)}-second window.`;
+    windowEl.textContent = `${Math.round(lastWindowMs / 1000)}s`;
   } catch (e) {
     micHint.textContent = `Mic access denied: ${e.message}`;
   }

@@ -3,149 +3,72 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0a0a0f" />
-  <meta name="description" content="Timbre — an emotion-aware voice companion" />
-  <title>Timbre</title>
+  <meta name="theme-color" content="#050505" />
+  <meta name="description" content="Timbre adds vocal context to digital conversation, without pretending certainty." />
+  <title>Timbre — Voice, in context</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
-  <div class="app">
-    <!-- Ambient gradient background -->
-    <div class="bg-glow" aria-hidden="true"></div>
-
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">T</div>
-        <span class="brand-name">Timbre</span>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="cursor-glow" id="cursorGlow" aria-hidden="true"></div>
+  <header class="site-nav" id="siteNav">
+    <a class="wordmark" href="#top" aria-label="Timbre home"><span class="wordmark-signal" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Timbre</a>
+    <nav class="nav-links" aria-label="Primary navigation"><a href="#why">Context</a><a href="#method">Method</a></nav>
+    <a class="nav-cta magnetic" href="#experience">Try Timbre <span>↗</span></a>
+  </header>
+  <main>
+    <section class="hero" id="top">
+      <canvas id="timbreScene" aria-hidden="true"></canvas><div class="hero-aurora" aria-hidden="true"></div>
+      <div class="hero-copy">
+        <p class="eyebrow hero-reveal"><span class="status-pulse"></span> Vocal context, carefully estimated</p>
+        <h1 class="hero-title"><span class="hero-reveal">Voice,</span><span class="gradient-text hero-reveal">in context.</span></h1>
+        <p class="hero-intro hero-reveal">Timbre notices tone, pace, and energy so a digital companion can respond with a little more care.</p>
+        <div class="hero-actions hero-reveal"><a class="primary-action magnetic" href="#experience">Start a session <span>↗</span></a><a class="text-action" href="#method">See how it works</a></div>
       </div>
-
-      <nav class="nav">
-        <a class="nav-item active" href="#session">
-          <span class="nav-icon">◉</span> Live Session
-        </a>
-        <a class="nav-item" href="#history">
-          <span class="nav-icon">▤</span> History
-        </a>
-        <a class="nav-item" href="#settings">
-          <span class="nav-icon">⚙</span> Settings
-        </a>
-      </nav>
-
-      <div class="sidebar-footer">
-        <div class="service-status">
-          <span id="statusDot" class="dot"></span>
-          <span id="statusText">Connecting…</span>
-        </div>
-        <div class="service-detail" id="statusDetail">service status</div>
+      <div class="hero-caption hero-reveal"><span>Live signal</span><i></i><span>Not a diagnosis</span></div>
+      <a class="scroll-note" href="#why" aria-label="Scroll to learn more"><span>Explore</span><i></i></a>
+    </section>
+    <section class="context section-dark" id="why">
+      <p class="section-kicker reveal">01 / Context</p>
+      <div class="context-head"><h2 class="display-heading reveal">The words stay the same.<br><span class="gradient-text">The signal moves.</span></h2><p class="section-lede reveal">“I’m fine” can sound steady, hesitant, bright, or strained. Timbre keeps that extra layer in view—without treating it as inner truth.</p></div>
+      <div class="voice-stage reveal" id="voiceQuote"><div class="voice-glow" aria-hidden="true"></div><div class="quote-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><p>“I’m fine.”</p><span class="quote-tone" id="quoteTone">steady?</span></div>
+      <div class="context-notes">
+        <article class="reveal"><span>01</span><h3>Listen beyond text</h3><p>Pitch, rhythm, energy, and texture retain cues that a transcript leaves behind.</p></article>
+        <article class="reveal"><span>02</span><h3>Keep uncertainty visible</h3><p>Timbre returns a distribution, not a confident label about a person.</p></article>
+        <article class="reveal"><span>03</span><h3>Respond, don’t diagnose</h3><p>The signal can shape a gentler reply. It should never make a high-stakes decision.</p></article>
       </div>
-    </aside>
-
-    <!-- Main content -->
-    <main class="content">
-      <!-- Header bar -->
-      <header class="topbar">
-        <div>
-          <h1 class="page-title">Live Session</h1>
-          <p class="page-sub">Real-time emotional perception from your voice</p>
-        </div>
-        <div class="topbar-actions">
-          <span class="model-chip">Perception Engine v0.1</span>
-          <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">◐</button>
-        </div>
-      </header>
-
-      <!-- Mic row -->
-      <section class="mic-section">
-        <button class="mic-btn" id="micBtn" aria-label="Start listening">
-          <span class="mic-badge" id="micBadge" aria-hidden="true"></span>
-          <span class="mic-halo" aria-hidden="true"></span>
-          <span class="mic-icon" id="micIcon" aria-hidden="true">●</span>
-        </button>
-        <div class="mic-copy">
-          <h2 class="mic-state" id="micState">Ready to listen</h2>
-          <p class="mic-hint" id="micHint">Tap to grant microphone access and begin a live perception session.</p>
-        </div>
-      </section>
-
-      <!-- Dashboard grid -->
-      <div class="grid">
-        <!-- Emotion card -->
-        <section class="card emotion-card">
-          <div class="card-head">
-            <h3 class="card-title">Detected Emotion</h3>
-            <span class="card-badge live-badge" id="liveBadge">● LIVE</span>
-          </div>
-          <div class="emotion-body">
-            <div class="ring-wrap">
-              <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
-                <circle class="ring-bg" cx="60" cy="60" r="52" />
-                <circle class="ring-fg" id="ringFg" cx="60" cy="60" r="52" />
-              </svg>
-              <div class="ring-center">
-                <span class="ring-pct" id="confidencePct">—</span>
-                <span class="ring-caption">confidence</span>
-              </div>
-            </div>
-            <div class="emotion-meta">
-              <div class="emotion-label-row">
-                <span class="emotion-icon" id="emotionIcon" aria-hidden="true">◌</span>
-                <span class="emotion-label" id="emotionLabel">—</span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-key">Credible interval</span>
-                <span class="meta-val" id="intervalEl">± —</span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-key">Turns analysed</span>
-                <span class="meta-val" id="turnEl">0</span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-key">Audio window</span>
-                <span class="meta-val" id="windowEl">—</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Mood graph card -->
-        <section class="card graph-card">
-          <div class="card-head">
-            <h3 class="card-title">Emotion Trajectory</h3>
-            <span class="card-badge">live</span>
-          </div>
-          <div class="chart-wrap">
-            <canvas id="moodChart"></canvas>
-          </div>
-        </section>
+    </section>
+    <section class="method" id="method">
+      <div class="method-sticky"><p class="section-kicker reveal">02 / Method</p><h2 class="display-heading reveal">From sound<br>to <span class="gradient-text">signal.</span></h2><p class="section-lede reveal">A compact classical ML pipeline. Every stage stays inspectable.</p><div class="method-orb" aria-hidden="true"><i></i><i></i><i></i></div></div>
+      <div class="method-steps">
+        <article class="method-step reveal" data-step="01"><div class="step-line waveform-mini" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><p class="step-label">Signal</p><h3>Capture the shape</h3><p>Short audio windows preserve how the voice changes from frame to frame.</p><small>Pitch · MFCC · energy</small></article>
+        <article class="method-step reveal" data-step="02"><div class="step-line point-cloud" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><p class="step-label">Structure</p><h3>Reduce the noise</h3><p>Train-only scaling and reduction surface the useful acoustic patterns.</p><small>StandardScaler · PCA / LLE</small></article>
+        <article class="method-step reveal" data-step="03"><div class="step-line state-path" aria-hidden="true"><i></i><i></i><i></i><i></i></div><p class="step-label">Sequence</p><h3>Follow the motion</h3><p>Per-emotion HMMs model the sequence; hand-written Viterbi traces the best path.</p><small>Gaussian HMM · Viterbi</small></article>
+        <article class="method-step reveal" data-step="04"><div class="step-line probability-rings" aria-hidden="true"><i></i><i></i><i></i></div><p class="step-label">Uncertainty</p><h3>Leave room for doubt</h3><p>A posterior distribution carries ambiguity into the final experience.</p><small>Posterior · interval estimate</small></article>
       </div>
-
-      <!-- Chat card -->
-      <section class="card chat-card" id="session">
-        <div class="card-head">
-          <h3 class="card-title">Companion Dialogue</h3>
-          <span class="card-badge" id="chatState">idle</span>
+    </section>
+    <section class="boundary"><p class="section-kicker reveal">03 / Boundary</p><p class="boundary-copy reveal">A voice is a signal,<br><span>not a confession.</span></p><div class="boundary-foot reveal"><p>Timbre estimates vocal affect. It does not know how someone truly feels.</p><span>Vocal affect ≠ internal state</span></div></section>
+    <section class="product-stage" id="experience">
+      <div class="product-heading"><div><p class="section-kicker reveal">04 / Live session</p><h2 class="display-heading reveal">Listen in<br><span class="gradient-text">real time.</span></h2></div><p class="section-lede reveal">A two-second window becomes a transparent signal you can inspect. Demo mode is labelled clearly when no trained model is installed.</p></div>
+      <div class="product-shell reveal">
+        <div class="product-bar"><div class="shell-brand"><span class="wordmark-signal"><i></i><i></i><i></i><i></i></span>Timbre</div><div class="service-status"><span id="statusDot" class="dot"></span><span id="statusText">Connecting…</span><small id="statusDetail">service status</small></div></div>
+        <section class="session-hero"><div class="session-copy"><p class="mono-label">Live vocal input</p><h3 class="mic-state" id="micState">Ready when you are.</h3><p class="mic-hint" id="micHint">Begin when it feels natural.</p></div><button class="mic-btn magnetic" id="micBtn" aria-label="Start listening"><span class="mic-rings" aria-hidden="true"></span><span class="mic-badge" id="micBadge" aria-hidden="true"></span><span class="mic-icon" id="micIcon" aria-hidden="true">●</span><small>LISTEN</small></button></section>
+        <div class="dashboard-grid">
+          <section class="dashboard-card emotion-card"><div class="card-head"><h3>Current signal</h3><span class="card-badge live-badge" id="liveBadge">● PAUSED</span></div><div class="emotion-body"><div class="ring-wrap"><svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-bg" cx="60" cy="60" r="52"/><circle class="ring-fg" id="ringFg" cx="60" cy="60" r="52"/></svg><div class="ring-center"><span class="ring-pct" id="confidencePct">—</span><span>confidence</span></div></div><div class="emotion-meta"><div class="emotion-label-row"><span class="emotion-icon" id="emotionIcon">◌</span><span class="emotion-label" id="emotionLabel">Awaiting voice</span></div><div class="meta-row"><span>Interval estimate</span><b id="intervalEl">± —</b></div><div class="meta-row"><span>Windows analysed</span><b id="turnEl">0</b></div><div class="meta-row"><span>Audio window</span><b id="windowEl">—</b></div></div></div></section>
+          <section class="dashboard-card graph-card"><div class="card-head"><h3>Signal over time</h3><span class="card-badge">LIVE TRACE</span></div><div class="chart-wrap"><canvas id="moodChart"></canvas></div></section>
         </div>
-        <div class="chat-log" id="log" aria-live="polite">
-          <div class="chat-empty" id="chatEmpty">
-            <span class="chat-empty-mark">◎</span>
-            <p>Start a session and the companion will respond based on your emotional state.</p>
-          </div>
-        </div>
-        <form class="chat-form" id="chatForm">
-          <input class="chat-input" id="userText" type="text" placeholder="Message Timbre…" autocomplete="off" />
-          <button class="send-btn" id="sendBtn" type="submit" disabled aria-label="Send">
-            <span class="send-arrow">↗</span>
-          </button>
-        </form>
-      </section>
-    </main>
-  </div>
-
-  <script src="/static/app.js"></script>
+        <section class="dashboard-card chat-card"><div class="card-head"><h3>Conversation</h3><span class="card-badge" id="chatState">IDLE</span></div><div class="chat-log" id="log" aria-live="polite"><div class="chat-empty" id="chatEmpty"><span>◎</span><p>Start a session, then say what’s on your mind.</p></div></div><form class="chat-form" id="chatForm"><label class="sr-only" for="userText">Message Timbre</label><input class="chat-input" id="userText" type="text" placeholder="Write a message…" autocomplete="off"/><button class="send-btn" id="sendBtn" type="submit" disabled aria-label="Send message">Send <span>↗</span></button></form></section>
+      </div>
+    </section>
+    <section class="closing"><canvas id="closingScene" aria-hidden="true"></canvas><p class="section-kicker reveal">05 / Begin</p><h2 class="display-heading reveal">A little more context.<br><span class="gradient-text">A little more care.</span></h2><a class="closing-action magnetic reveal" href="#experience">Start listening <span>↗</span></a><footer><a class="wordmark" href="#top"><span class="wordmark-signal"><i></i><i></i><i></i><i></i></span>Timbre</a><p>Voice-aware interaction, with uncertainty intact.</p><span>Research prototype · 2026</span></footer></section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="/static/landing.js"></script><script src="/static/app.js"></script>
 </body>
 </html>
