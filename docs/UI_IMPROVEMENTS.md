@@ -97,3 +97,17 @@ trained result.
 - `make ci` passes.
 - No fabricated research, performance, privacy, or deployment claims are introduced.
 
+## Campaign layer — attention without false spectacle
+
+The corporate foundation remains the source of truth, but the hero can behave like a campaign:
+
+- Use a kinetic headline that cycles through acoustic dimensions such as tone, rhythm, energy,
+  and doubt.
+- Replace the generic particle sphere with a distinctive 3D voice-knot object that deforms like
+  a living signal.
+- Add an instrument-style Voice AI scanner to make the product legible before the live demo.
+- Label simulated preview values explicitly; only `/api/inference` results may be presented as
+  live model output.
+- Use a high-contrast signal ticker and scroll telemetry to create urgency.
+- Concentrate the aggressive motion above the fold so research, safety, and product information
+  remain readable.
