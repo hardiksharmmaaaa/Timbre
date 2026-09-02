@@ -42,6 +42,9 @@ const chatForm = document.getElementById("chatForm");
 const userText = document.getElementById("userText");
 const sendBtn = document.getElementById("sendBtn");
 const chatState = document.getElementById("chatState");
+const sessionScreen = document.getElementById("sessionScreen");
+const sessionContent = document.getElementById("sessionContent");
+const startSessionBtn = document.getElementById("startSessionBtn");
 
 /* ---- State ---- */
 let recorder = null;
@@ -241,6 +244,16 @@ async function toggleMic() {
   }
 }
 
+/* ---- Session transition ---- */
+function startSession() {
+  sessionScreen.classList.add("is-hiding");
+  setTimeout(() => {
+    sessionScreen.style.display = "none";
+    sessionContent.style.display = "block";
+    sessionContent.classList.add("is-revealing");
+  }, 450);
+}
+
 /* ---- Chat ---- */
 function addMsg(sender, text) {
   chatEmpty?.remove();
@@ -282,6 +295,7 @@ async function sendChat(e) {
 }
 
 /* ---- Wire up ---- */
+startSessionBtn.addEventListener("click", startSession);
 micBtn.addEventListener("click", toggleMic);
 chatForm.addEventListener("submit", sendChat);
 userText.addEventListener("input", () => { sendBtn.disabled = !userText.value.trim(); });

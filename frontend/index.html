@@ -85,12 +85,29 @@
       <div class="product-heading"><div><p class="section-kicker reveal">05 / Live demo</p><h2 class="display-heading reveal">Inspect the signal<br><span class="accent-text">in real time.</span></h2></div><p class="section-lede reveal">A two-second audio window becomes a probability distribution you can inspect. When no trained artifact is installed, the interface identifies mock inference as demo mode.</p></div>
       <div class="product-shell reveal">
         <div class="product-bar"><div class="shell-brand"><span class="wordmark-signal"><i></i><i></i><i></i><i></i></span>Timbre</div><div class="service-status"><span id="statusDot" class="dot"></span><span id="statusText">Connecting…</span><small id="statusDetail">service status</small></div></div>
-        <section class="session-hero"><div class="session-copy"><p class="mono-label">Live vocal input</p><h3 class="mic-state" id="micState">Ready when you are.</h3><p class="mic-hint" id="micHint">Begin when it feels natural.</p></div><button class="mic-btn" id="micBtn" aria-label="Start listening"><span class="mic-rings" aria-hidden="true"></span><span class="mic-badge" id="micBadge" aria-hidden="true"></span><span class="mic-icon" id="micIcon" aria-hidden="true">●</span><small>LISTEN</small></button></section>
-        <div class="dashboard-grid">
-          <section class="dashboard-card emotion-card"><div class="card-head"><h3>Current signal</h3><span class="card-badge live-badge" id="liveBadge">● PAUSED</span></div><div class="emotion-body"><div class="ring-wrap"><svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-bg" cx="60" cy="60" r="52"/><circle class="ring-fg" id="ringFg" cx="60" cy="60" r="52"/></svg><div class="ring-center"><span class="ring-pct" id="confidencePct">—</span><span>confidence</span></div></div><div class="emotion-meta"><div class="emotion-label-row"><span class="emotion-icon" id="emotionIcon">◌</span><span class="emotion-label" id="emotionLabel">Awaiting voice</span></div><div class="meta-row"><span>Interval estimate</span><b id="intervalEl">± —</b></div><div class="meta-row"><span>Windows analysed</span><b id="turnEl">0</b></div><div class="meta-row"><span>Audio window</span><b id="windowEl">—</b></div></div></div></section>
-          <section class="dashboard-card graph-card"><div class="card-head"><h3>Signal over time</h3><span class="card-badge">LIVE TRACE</span></div><div class="chart-wrap"><canvas id="moodChart"></canvas></div></section>
+
+        <div class="session-screen" id="sessionScreen">
+          <div class="session-screen-inner">
+            <div class="session-pulse" aria-hidden="true"></div>
+            <button class="session-start-btn" id="startSessionBtn" aria-label="Start voice session">
+              <span class="session-ring" aria-hidden="true"></span>
+              <span class="session-ring session-ring-2" aria-hidden="true"></span>
+              <span class="session-icon" aria-hidden="true">●</span>
+            </button>
+            <p class="session-title">Ready to listen</p>
+            <p class="session-sub">Tap to begin. Timbre will analyse the shape of your voice in real time.</p>
+            <div class="session-note"><span>◎</span><span>Mic permission will be requested on start</span></div>
+          </div>
         </div>
-        <section class="dashboard-card chat-card"><div class="card-head"><h3>Conversation</h3><span class="card-badge" id="chatState">IDLE</span></div><div class="chat-log" id="log" aria-live="polite"><div class="chat-empty" id="chatEmpty"><span>◎</span><p>Start a session, then say what’s on your mind.</p></div></div><form class="chat-form" id="chatForm"><label class="sr-only" for="userText">Message Timbre</label><input class="chat-input" id="userText" type="text" placeholder="Write a message…" autocomplete="off"/><button class="send-btn" id="sendBtn" type="submit" disabled aria-label="Send message">Send <span>↗</span></button></form></section>
+
+        <div class="session-content" id="sessionContent" style="display: none;">
+          <section class="session-hero"><div class="session-copy"><p class="mono-label">Live vocal input</p><h3 class="mic-state" id="micState">Ready when you are.</h3><p class="mic-hint" id="micHint">Begin when it feels natural.</p></div><button class="mic-btn" id="micBtn" aria-label="Start listening"><span class="mic-rings" aria-hidden="true"></span><span class="mic-badge" id="micBadge" aria-hidden="true"></span><span class="mic-icon" id="micIcon" aria-hidden="true">●</span><small>LISTEN</small></button></section>
+          <div class="dashboard-grid">
+            <section class="dashboard-card emotion-card"><div class="card-head"><h3>Current signal</h3><span class="card-badge live-badge" id="liveBadge">● PAUSED</span></div><div class="emotion-body"><div class="ring-wrap"><svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-bg" cx="60" cy="60" r="52"/><circle class="ring-fg" id="ringFg" cx="60" cy="60" r="52"/></svg><div class="ring-center"><span class="ring-pct" id="confidencePct">—</span><span>confidence</span></div></div><div class="emotion-meta"><div class="emotion-label-row"><span class="emotion-icon" id="emotionIcon">◌</span><span class="emotion-label" id="emotionLabel">Awaiting voice</span></div><div class="meta-row"><span>Interval estimate</span><b id="intervalEl">± —</b></div><div class="meta-row"><span>Windows analysed</span><b id="turnEl">0</b></div><div class="meta-row"><span>Audio window</span><b id="windowEl">—</b></div></div></div></section>
+            <section class="dashboard-card graph-card"><div class="card-head"><h3>Signal over time</h3><span class="card-badge">LIVE TRACE</span></div><div class="chart-wrap"><canvas id="moodChart"></canvas></div></section>
+          </div>
+          <section class="dashboard-card chat-card"><div class="card-head"><h3>Conversation</h3><span class="card-badge" id="chatState">IDLE</span></div><div class="chat-log" id="log" aria-live="polite"><div class="chat-empty" id="chatEmpty"><span>◎</span><p>Start a session, then say what's on your mind.</p></div></div><form class="chat-form" id="chatForm"><label class="sr-only" for="userText">Message Timbre</label><input class="chat-input" id="userText" type="text" placeholder="Write a message…" autocomplete="off"/><button class="send-btn" id="sendBtn" type="submit" disabled aria-label="Send message">Send <span>↗</span></button></form></section>
+        </div>
       </div>
     </section>
     <section class="integrity" id="research">
