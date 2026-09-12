@@ -8,9 +8,11 @@ import pytest
 
 from scripts.update_tracker import (
     TrackerFormatError,
+    calculate_progress,
     find_row,
     parse_tracker,
     refresh_tracker,
+    render_progress,
     select_next_task,
     validate_repository,
 )
@@ -29,14 +31,17 @@ def tracker_text(task_rows: list[str]) -> str:
         *task_rows,
         "| Release gate | Repository validation | Pass | Old evidence | Keep checks passing |",
     ]
-    return "\n".join(rows) + "\n"
+    return "\n".join(rows) + "\n\n" + render_progress(0, len(task_rows), 0, 0)
 
 
 def test_refresh_tracker_selects_first_blocked_engineering_task() -> None:
     text = tracker_text(
         [
-            "| Pipeline | Parse datasets | Pending | Missing parsers | Add parsers |",
-            "| Model | Train model | Blocked | Missing features | Fix model inputs |",
+            "| Pipeline | Dataset-specific parsers | Pending | Missing parsers | Add parsers |",
+            (
+                "| Model | Six-class PCA and HMM training | Blocked | Missing features | "
+                "Fix model inputs |"
+            ),
         ]
     )
 
@@ -45,24 +50,34 @@ def test_refresh_tracker_selects_first_blocked_engineering_task() -> None:
 
     assert find_row(rows, "Workflow", "Next engineering task")[2:] == [
         "Next",
-        "Model: Train model",
+        "Model: Six-class PCA and HMM training",
         "Fix model inputs",
     ]
     assert find_row(rows, "Quality", "Pytest")[3] == "`make ci` passed pytest on 2026-09-12"
+    assert "\n\n## Project Progress\n\n> **0% complete**" in refreshed
+    assert "Estimated effort remaining: 5 developer-days" in refreshed
+    assert "| Progress |" not in refreshed
 
 
 def test_refresh_tracker_selects_pending_when_nothing_is_blocked() -> None:
     text = tracker_text(
         [
-            "| Pipeline | Parse datasets | Complete | Parsers exist | Maintain parsers |",
-            "| Model | Train model | Pending | Awaiting training | Train model |",
+            "| Pipeline | RAVDESS clip discovery | Complete | Discovery works | Maintain it |",
+            (
+                "| Model | Six-class PCA and HMM training | Pending | Awaiting training | "
+                "Train model |"
+            ),
         ]
     )
 
     rows = parse_tracker(refresh_tracker(text, date(2026, 9, 12), "main"))
 
-    assert select_next_task(rows) == ("Model", "Train model", "Train model")
-    assert find_row(rows, "Workflow", "Next engineering task")[3] == "Model: Train model"
+    assert select_next_task(rows) == (
+        "Model",
+        "Six-class PCA and HMM training",
+        "Train model",
+    )
+    assert calculate_progress(rows) == (1, 2, 50, 3)
 
 
 def test_parse_tracker_rejects_non_table_content() -> None:
@@ -70,7 +85,7 @@ def test_parse_tracker_rejects_non_table_content() -> None:
         parse_tracker("# Tracker\n\n| Area | Trackable item | Status | Evidence | Next |\n")
 
 
-def test_repository_tracker_is_table_only_and_current_next_task() -> None:
+def test_repository_tracker_has_table_and_highlighted_progress_footer() -> None:
     tracker_path = Path(__file__).resolve().parents[1] / "tracker.md"
     rows = parse_tracker(tracker_path.read_text(encoding="utf-8"))
 
@@ -82,6 +97,11 @@ def test_repository_tracker_is_table_only_and_current_next_task() -> None:
         "RAVDESS clip discovery",
         "Fix discovery using validated filename fields and add a regression test",
     )
+    assert calculate_progress(rows) == (7, 18, 39, 24)
+    tracker_text = tracker_path.read_text(encoding="utf-8")
+    assert "\n\n## Project Progress\n\n> **39% complete**" in tracker_text
+    assert "Estimated effort remaining: 24 developer-days" in tracker_text
+    assert "| Progress |" not in tracker_text
 
 
 def test_validate_repository_rejects_tracked_raw_data(tmp_path: Path) -> None:

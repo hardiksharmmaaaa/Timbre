@@ -2,6 +2,7 @@
 | --- | --- | --- | --- | --- |
 | Workflow | Next engineering task | Next | Pipeline: RAVDESS clip discovery | Fix discovery using validated filename fields and add a regression test |
 | Workflow | Automatic ship refresh | Complete | `make ship` runs CI and refreshes this table before committing and pushing | Keep tracker updates in the guarded ship workflow |
+| UI | Frontend experience | Complete | Browser interface, microphone flow, mood graph, and animations are implemented | Keep UI integration stable while connecting the trained pipeline |
 | Planning | Model and data plan | Complete | `docs/MODEL_AND_DATA_PLAN.md` documents architecture, datasets, training, and evaluation | Keep decisions and dates current |
 | Data | RAVDESS download | Pass | 1,440 WAV files, 24 actors; archive MD5 `bc696df654c87fed845eb13823edef8a` | Exclude calm and surprise for the six-class experiment |
 | Data | CREMA-D download | Pass | 7,442 WAV files, 91 actors; commit `1658cd342dff90010aa843eaeebd53610a08b1dc`; Git LFS check passed | Preserve ratings metadata in the canonical manifest |
@@ -26,3 +27,9 @@
 | Evaluation | In-domain and TESS evaluation | Pending | Downloaded data is ready, but the combined pipeline is not | Report clip counts, speaker counts, macro-F1, balanced accuracy, and confusion matrices |
 | Evaluation | Training-only augmentation ablation | Pending | RIRS_NOISES is downloaded but not integrated | Compare identical frozen splits with and without augmentation |
 | Release gate | Repository validation | Pass | `make ci` and tracker validation passed on 2026-09-12 | Do not mark future work complete unless Ruff and pytest both pass |
+
+## Project Progress
+
+> **39% complete** — 7 of 18 tracked delivery milestones.
+>
+> **Estimated effort remaining: 24 developer-days (about 5 working weeks).** This excludes model-training runtime and external approvals.

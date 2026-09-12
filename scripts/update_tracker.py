@@ -14,7 +14,40 @@ TRACKER_HEADER = [
     "Evidence or exit criterion",
     "Next checkpoint",
 ]
+PROGRESS_HEADING = "## Project Progress"
 ENGINEERING_AREAS = ("Pipeline", "Features", "Baselines", "Model", "Uncertainty", "Evaluation")
+DELIVERY_AREAS = (
+    "UI",
+    "Planning",
+    "Data",
+    "Pipeline",
+    "Features",
+    "Baselines",
+    "Model",
+    "Uncertainty",
+    "Evaluation",
+)
+COMPLETED_STATUSES = frozenset({"Complete", "Pass"})
+EFFORT_DAYS = {
+    ("UI", "Frontend experience"): 1,
+    ("Planning", "Model and data plan"): 1,
+    ("Data", "RAVDESS download"): 1,
+    ("Data", "CREMA-D download"): 1,
+    ("Data", "TESS download"): 1,
+    ("Data", "RIRS_NOISES download"): 1,
+    ("Pipeline", "RAVDESS clip discovery"): 1,
+    ("Pipeline", "Dataset-specific parsers"): 2,
+    ("Pipeline", "Canonical manifest"): 2,
+    ("Pipeline", "Audio integrity screening"): 2,
+    ("Pipeline", "Speaker-disjoint splits"): 2,
+    ("Features", "Cached extraction"): 2,
+    ("Baselines", "Logistic regression and random forest"): 2,
+    ("Model", "Six-class PCA and HMM training"): 3,
+    ("Model", "Hand-written Viterbi validation"): 1,
+    ("Uncertainty", "Probability calibration and abstention"): 3,
+    ("Evaluation", "In-domain and TESS evaluation"): 3,
+    ("Evaluation", "Training-only augmentation ablation"): 2,
+}
 
 
 class TrackerFormatError(ValueError):
@@ -22,8 +55,12 @@ class TrackerFormatError(ValueError):
 
 
 def parse_tracker(text: str) -> list[list[str]]:
-    """Parse and validate the table-only tracker."""
-    lines = [line for line in text.splitlines() if line.strip()]
+    """Parse and validate the task table before the progress footer."""
+    marker = f"\n\n{PROGRESS_HEADING}\n"
+    if text.count(marker) > 1:
+        raise TrackerFormatError("tracker contains multiple progress sections")
+    table_text = text.split(marker, maxsplit=1)[0]
+    lines = [line for line in table_text.splitlines() if line.strip()]
     if len(lines) < 2:
         raise TrackerFormatError("tracker must contain a header and separator")
     if any(not line.startswith("|") or not line.endswith("|") for line in lines):
@@ -44,6 +81,19 @@ def render_tracker(rows: list[list[str]]) -> str:
     return "\n".join(f"| {' | '.join(row)} |" for row in rows) + "\n"
 
 
+def render_progress(completed: int, total: int, percentage: int, remaining_days: int) -> str:
+    """Render the prominent progress summary below the tracker table."""
+    working_weeks = (remaining_days + 4) // 5
+    return (
+        f"{PROGRESS_HEADING}\n\n"
+        f"> **{percentage}% complete** — {completed} of {total} tracked delivery milestones.\n"
+        ">\n"
+        f"> **Estimated effort remaining: {remaining_days} developer-days "
+        f"(about {working_weeks} working weeks).** This excludes model-training runtime and "
+        "external approvals.\n"
+    )
+
+
 def find_row(rows: list[list[str]], area: str, item: str) -> list[str]:
     """Find one tracker row by its stable area and item fields."""
     matches = [row for row in rows[2:] if row[0] == area and row[1] == item]
@@ -59,6 +109,28 @@ def select_next_task(rows: list[list[str]]) -> tuple[str, str, str] | None:
             if row[0] in ENGINEERING_AREAS and row[2] == target_status:
                 return row[0], row[1], row[4]
     return None
+
+
+def calculate_progress(rows: list[list[str]]) -> tuple[int, int, int, int]:
+    """Calculate completed milestones, percentage, and remaining developer-days."""
+    delivery_rows = [row for row in rows[2:] if row[0] in DELIVERY_AREAS]
+    if not delivery_rows:
+        raise TrackerFormatError("tracker does not contain delivery milestones")
+
+    completed = 0
+    remaining_days = 0
+    for row in delivery_rows:
+        key = (row[0], row[1])
+        if key not in EFFORT_DAYS:
+            raise TrackerFormatError(f"missing effort estimate for {row[0]}: {row[1]}")
+        if row[2] in COMPLETED_STATUSES:
+            completed += 1
+        else:
+            remaining_days += EFFORT_DAYS[key]
+
+    total = len(delivery_rows)
+    percentage = round(completed * 100 / total)
+    return completed, total, percentage, remaining_days
 
 
 def refresh_tracker(text: str, verified_on: date, branch: str) -> str:
@@ -103,7 +175,13 @@ def refresh_tracker(text: str, verified_on: date, branch: str) -> str:
         workflow_row[3] = f"{area}: {item}"
         workflow_row[4] = checkpoint
 
-    return render_tracker(rows)
+    completed, total, percentage, remaining_days = calculate_progress(rows)
+    return render_tracker(rows) + "\n" + render_progress(
+        completed,
+        total,
+        percentage,
+        remaining_days,
+    )
 
 
 def run_git(repo_root: Path, *args: str) -> str:
