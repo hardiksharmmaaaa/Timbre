@@ -4,7 +4,7 @@ PYTHON := .venv/bin/python
 PIP := .venv/bin/pip
 UVICORN := .venv/bin/uvicorn
 
-.PHONY: setup data-download data-extract data-split train evaluate serve lint test ci ship clean
+.PHONY: setup data-download data-extract data-split train evaluate serve lint test ci tracker-update ship clean
 
 setup:
 	python3 -m venv .venv
@@ -37,7 +37,11 @@ test:
 
 ci: lint test
 
-# Run checks, create one meaningful commit, and push the current branch.
+# Refresh tracker status and select the next engineering task after checks pass.
+tracker-update: ci
+	$(PYTHON) -m scripts.update_tracker --checks-passed
+
+# Run checks, refresh the tracker, create one meaningful commit, and push the current branch.
 # Usage: make ship MESSAGE="Improve voice scanner animation"
 ship:
 	@bash scripts/ship.sh "$(MESSAGE)"
