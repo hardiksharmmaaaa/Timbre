@@ -61,8 +61,10 @@ if (( ${#blocked_files[@]} > 0 )); then
 fi
 
 echo "Shipping as $author_name <$author_email> on branch $branch"
-echo "Running repository checks..."
+echo "Running repository checks and refreshing tracker..."
 make ci
+.venv/bin/python -m scripts.update_tracker --checks-passed
+git diff --check
 
 git add -A
 if git diff --cached --quiet; then
