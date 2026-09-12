@@ -44,3 +44,5 @@ ship:
 
 clean:
 	rm -rf data/processed/* models/* experiments/* .venv
+
+## to run the app: make serve
