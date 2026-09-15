@@ -12,7 +12,7 @@ import numpy as np
 
 from timbre.core.types import EmotionState
 from timbre.features.extractor import load_and_extract
-from timbre.utils.common import get_logger, parse_ravdess_emotion
+from timbre.utils.common import get_logger, parse_ravdess_fields
 from timbre.utils.config import settings
 
 log = get_logger("extract")
@@ -21,13 +21,13 @@ log = get_logger("extract")
 def find_ravdess_clips(raw_dir: Path) -> list[tuple[Path, EmotionState]]:
     clips = []
     for wav in sorted(raw_dir.rglob("*.wav")):
-        if "Audio_Speech" not in str(wav):
-            continue  # only speech audio, skip song/general files
         try:
-            label = parse_ravdess_emotion(wav.name)
+            fields = parse_ravdess_fields(wav.name)
         except ValueError:
             continue
-        clips.append((wav, EmotionState(label)))
+        if fields[:2] != (3, 1):
+            continue  # Audio-only speech; select by metadata, independent of archive layout.
+        clips.append((wav, EmotionState(fields[2])))
     return clips
 
 

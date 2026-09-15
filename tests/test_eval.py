@@ -4,9 +4,26 @@ import numpy as np
 
 from timbre.eval.metrics import (
     accuracy,
+    balanced_accuracy,
     confusion_matrix,
     expected_calibration_error,
 )
+
+
+def test_balanced_accuracy_includes_classes_with_zero_recall():
+    assert balanced_accuracy(np.array([0, 1]), np.array([0, 0]), 2) == 0.5
+
+
+def test_balanced_accuracy_is_zero_when_every_prediction_is_wrong():
+    assert balanced_accuracy(np.array([0, 1]), np.array([1, 0]), 2) == 0.0
+
+
+def test_balanced_accuracy_ignores_classes_absent_from_ground_truth():
+    assert balanced_accuracy(np.array([1, 1]), np.array([1, 0]), 3) == 0.5
+
+
+def test_ece_includes_zero_confidence_predictions():
+    assert expected_calibration_error(np.array([1]), np.array([0.0])) == 1.0
 
 
 def test_accuracy_round_trip():

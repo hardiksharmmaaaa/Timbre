@@ -30,3 +30,12 @@ def test_actor_splits_are_disjoint_and_complete():
 
 def test_actor_split_is_deterministic():
     assert split_by_actor(_clips(), seed=9) == split_by_actor(_clips(), seed=9)
+
+
+def test_actor_splits_keep_training_nonempty_when_rounding_consumes_all_actors():
+    clips = [(f"actor_{actor}", 1, actor) for actor in range(1, 5)]
+
+    splits = split_by_actor(clips, val_frac=0.49, test_frac=0.49)
+
+    assert all(splits[name] for name in ("train", "val", "test"))
+    assert sum(len(splits[name]) for name in ("train", "val", "test")) == len(clips)

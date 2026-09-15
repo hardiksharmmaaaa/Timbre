@@ -141,7 +141,7 @@ def refresh_tracker(text: str, verified_on: date, branch: str) -> str:
     automated_updates = {
         ("Data safety", "Raw dataset exclusion"): (
             "Pass",
-            f"No raw dataset files were tracked when checked on {verified_date}",
+            f"No data, model, experiment, or recording files were tracked on {verified_date}",
         ),
         ("Quality", "Ruff"): ("Pass", f"`make ci` passed Ruff on {verified_date}"),
         ("Quality", "Pytest"): ("Pass", f"`make ci` passed pytest on {verified_date}"),
@@ -197,12 +197,14 @@ def run_git(repo_root: Path, *args: str) -> str:
 
 
 def validate_repository(repo_root: Path) -> str:
-    """Validate patch hygiene and prevent raw datasets from being tracked."""
+    """Validate patch hygiene and reject tracked private data and generated artifacts."""
     run_git(repo_root, "diff", "--check")
     run_git(repo_root, "diff", "--cached", "--check")
-    tracked_raw = run_git(repo_root, "ls-files", "--", "data/raw")
-    if tracked_raw:
-        raise RuntimeError("refusing to refresh tracker while data/raw contains tracked files")
+    for protected_dir in ("data", "models", "experiments", "recordings"):
+        if run_git(repo_root, "ls-files", "--", protected_dir):
+            raise RuntimeError(
+                f"refusing to refresh tracker while {protected_dir} contains tracked files"
+            )
     return run_git(repo_root, "branch", "--show-current")
 
 

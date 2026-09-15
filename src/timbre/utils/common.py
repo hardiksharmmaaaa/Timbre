@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import random
+from pathlib import Path
 
 import numpy as np
 
@@ -29,22 +30,28 @@ def get_logger(name: str, level: str = "INFO") -> logging.Logger:
     return logger
 
 
+def parse_ravdess_fields(filename: str) -> tuple[int, ...]:
+    """Validate and return the seven encoded RAVDESS filename fields."""
+    fields = Path(filename).stem.split("-")
+    limits = (3, 2, 8, 2, 2, 2, 24)
+    if len(fields) != len(limits) or any(
+        len(field) != 2 or not field.isascii() or not field.isdigit() for field in fields
+    ):
+        raise ValueError(f"invalid RAVDESS filename: {filename!r}")
+    values = tuple(int(field) for field in fields)
+    if any(not 1 <= value <= limit for value, limit in zip(values, limits)):
+        raise ValueError(f"invalid RAVDESS filename fields: {filename!r}")
+    return values
+
+
 def parse_ravdess_emotion(filename: str) -> int:
     """RAVDESS filenames: 03-01-06-... -> 3rd token (01..08) is the emotion.
 
     01=neutral 02=calm 03=happy 04=sad 05=angry 06=fearful 07=disgust 08=surprised
     """
-    stem = filename.split(".")[0]
-    return int(stem.split("-")[2])
+    return parse_ravdess_fields(filename)[2]
 
 
 def parse_ravdess_actor(filename: str) -> int:
     """Return the actor ID (seventh RAVDESS filename field)."""
-    stem = filename.split(".")[0]
-    fields = stem.split("-")
-    if len(fields) != 7:
-        raise ValueError(f"invalid RAVDESS filename: {filename!r}")
-    actor = int(fields[6])
-    if not 1 <= actor <= 24:
-        raise ValueError(f"invalid RAVDESS actor ID: {actor}")
-    return actor
+    return parse_ravdess_fields(filename)[6]

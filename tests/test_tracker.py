@@ -90,17 +90,17 @@ def test_repository_tracker_has_table_and_highlighted_progress_footer() -> None:
     rows = parse_tracker(tracker_path.read_text(encoding="utf-8"))
 
     assert find_row(rows, "Workflow", "Next engineering task")[3] == (
-        "Pipeline: RAVDESS clip discovery"
+        "Pipeline: Dataset-specific parsers"
     )
     assert select_next_task(rows) == (
         "Pipeline",
-        "RAVDESS clip discovery",
-        "Fix discovery using validated filename fields and add a regression test",
+        "Dataset-specific parsers",
+        "Implement canonical six-class mappings",
     )
-    assert calculate_progress(rows) == (7, 18, 39, 24)
+    assert calculate_progress(rows) == (8, 18, 44, 23)
     tracker_text = tracker_path.read_text(encoding="utf-8")
-    assert "\n\n## Project Progress\n\n> **39% complete**" in tracker_text
-    assert "Estimated effort remaining: 24 developer-days" in tracker_text
+    assert "\n\n## Project Progress\n\n> **44% complete**" in tracker_text
+    assert "Estimated effort remaining: 23 developer-days" in tracker_text
     assert "| Progress |" not in tracker_text
 
 
@@ -111,5 +111,29 @@ def test_validate_repository_rejects_tracked_raw_data(tmp_path: Path) -> None:
     raw_file.write_bytes(b"not audio")
     subprocess.run(["git", "add", "data/raw/sample.wav"], cwd=tmp_path, check=True)
 
-    with pytest.raises(RuntimeError, match="data/raw contains tracked files"):
+    with pytest.raises(RuntimeError, match="data contains tracked files"):
         validate_repository(tmp_path)
+
+
+@pytest.mark.parametrize("relative_path", ["data/mood_sessions/session.json", "models/meta.json"])
+def test_validate_repository_rejects_tracked_private_artifacts(tmp_path, relative_path):
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    artifact = tmp_path / relative_path
+    artifact.parent.mkdir(parents=True)
+    artifact.write_text("{}")
+    subprocess.run(["git", "add", relative_path], cwd=tmp_path, check=True)
+
+    with pytest.raises(RuntimeError, match="tracked files"):
+        validate_repository(tmp_path)
+
+
+def test_private_session_logs_and_recordings_are_ignored(tmp_path):
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    repo_root = Path(__file__).resolve().parents[1]
+    (tmp_path / ".gitignore").write_text((repo_root / ".gitignore").read_text())
+
+    for relative_path in ("data/mood_sessions/session.json", "recordings/sample.webm"):
+        result = subprocess.run(
+            ["git", "check-ignore", "--quiet", relative_path], cwd=tmp_path, check=False
+        )
+        assert result.returncode == 0, f"private artifact is not ignored: {relative_path}"

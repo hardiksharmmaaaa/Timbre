@@ -14,7 +14,9 @@ plausible posteriors so the full UI can be tested end-to-end without data/traini
 from __future__ import annotations
 
 import io
+import logging
 import random
+import threading
 import time
 from pathlib import Path
 
@@ -23,9 +25,10 @@ import soundfile as sf
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+from starlette.concurrency import run_in_threadpool
 
-from timbre.core.types import EMOTION_NAMES, EmotionPosterior, EmotionState
+from timbre.core.types import EmotionPosterior, EmotionState
 from timbre.glue.companion import build_system_prompt, llm_reply
 from timbre.utils.config import settings
 
@@ -33,6 +36,8 @@ app = FastAPI(title="Timbre", version="0.1.0")
 
 # Perception model is loaded lazily at first inference (avoids slow startup).
 _perception = None
+_perception_lock = threading.Lock()
+log = logging.getLogger(__name__)
 _demo_counter = 0  # tracks inference calls in demo mode for cycling through emotions
 
 
@@ -44,9 +49,18 @@ class ChatRequest(BaseModel):
     intervals: dict[str, float] = Field(default_factory=dict)
     most_likely: str = "unknown"
 
+    @field_validator("text")
+    @classmethod
+    def nonblank_text(cls, value: str) -> str:
+        """Reject messages with no visible content."""
+        value = value.strip()
+        if not value:
+            raise ValueError("text must contain a message")
+        return value
+
 
 def _emotion_key(name: str) -> EmotionState:
-    by_name = {emotion_name: EmotionState(sid) for sid, emotion_name in EMOTION_NAMES.items()}
+    by_name = {state.name_lower: state for state in EmotionState}
     try:
         return by_name[name.lower()]
     except KeyError as exc:
@@ -65,6 +79,10 @@ def posterior_from_payload(
         raise ValueError("posterior probabilities must be between zero and one")
     if posterior.probs and not 0.999 <= sum(posterior.probs.values()) <= 1.001:
         raise ValueError("posterior probabilities must sum to one")
+    if any(not 0.0 <= value <= 1.0 for value in posterior.intervals.values()):
+        raise ValueError("posterior intervals must be between zero and one")
+    if not posterior.intervals.keys() <= posterior.probs.keys():
+        raise ValueError("posterior intervals must refer to a supplied probability")
     return posterior
 
 # Demo reply templates keyed by emotion (used when no LLM key is set).
@@ -116,20 +134,24 @@ DEMO_REPLIES: dict[str, list[str]] = {
 
 def _load_perception():
     global _perception
-    if _perception is not None:
-        return _perception
-    meta = settings.model_dir / "meta.json"
-    if not meta.exists():
-        return None
-    from timbre.api.pipeline import PerceptionPipeline
+    with _perception_lock:
+        if _perception is not None:
+            return _perception
+        meta = settings.model_dir / "meta.json"
+        if not meta.exists():
+            return None
+        from timbre.api.pipeline import PerceptionPipeline
 
-    _perception = PerceptionPipeline.load(settings.model_dir)
-    return _perception
+        try:
+            _perception = PerceptionPipeline.load(settings.model_dir)
+        except Exception as exc:  # trained artifacts may be missing or incompatible
+            log.error("Unable to load perception model (%s)", type(exc).__name__)
+            raise HTTPException(status_code=503, detail="Perception model is unavailable") from exc
+        return _perception
 
 
 def _mock_inference(n_frames: int = 60) -> dict:
-    """Generate a plausible mock posterior for demo mode. Cycles through emotions
-    weighted toward the audio energy so the graph is interesting but coherent."""
+    """Generate explicitly labelled random demo posteriors, independent of vocal affect."""
     global _demo_counter
     _demo_counter += 1
     emotions = ["neutral", "calm", "happy", "sad", "angry", "fearful", "disgust", "surprised"]
@@ -154,12 +176,13 @@ def _mock_inference(n_frames: int = 60) -> dict:
 
 @app.get("/api/health")
 def health() -> dict:
+    pipe = _load_perception()
     return {
         "service": "timbre",
         "version": app.version,
-        "model_loaded": _perception is not None,
+        "model_loaded": pipe is not None,
         "window_ms": settings.window_ms,
-        "demo_mode": _perception is None,
+        "demo_mode": pipe is None,
     }
 
 
@@ -170,18 +193,25 @@ async def inference(file: UploadFile = File(...)) -> dict:
     Falls back to a demo mock when no trained models exist so the full UI can be
     demonstrated without downloading RAVDESS data or training."""
     raw = await file.read()
+    return await run_in_threadpool(_infer_audio, raw)
 
-    pipe = _load_perception()
 
-    if pipe is None:
-        return _mock_inference()
-
+def _infer_audio(raw: bytes) -> dict:
+    """Decode and score audio away from the API event loop."""
     try:
         y, sr = sf.read(io.BytesIO(raw), dtype="float32")
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=400, detail=f"unreadable audio: {exc}") from exc
 
-    posterior = pipe.infer(y, sr) if y.ndim == 1 else pipe.infer(y.mean(axis=1), sr)
+    if not y.size or not np.isfinite(y).all():
+        raise HTTPException(status_code=400, detail="audio must contain finite, non-empty samples")
+    if y.ndim == 2:
+        y = y.mean(axis=1)
+
+    pipe = _load_perception()
+    if pipe is None:
+        return _mock_inference()
+    posterior = pipe.infer(y, sr)
 
     return {
         "posterior": {k.name_lower: v for k, v in posterior.probs.items()},
@@ -196,18 +226,18 @@ async def chat(payload: ChatRequest) -> dict:
     """Inject posterior into prompt, call LLM, return reply (+ optional TTS).
 
     Falls back to a canned demo reply when no LLM API key is configured."""
-    if not settings.openai_api_key and not settings.gemini_api_key:
-        import time as _time
-
-        rng = random.Random(int(_time.time()))
-        pool = DEMO_REPLIES.get(payload.most_likely, DEMO_REPLIES["unknown"])
-        reply = rng.choice(pool)
-        return {"reply": reply, "_demo": True}
-
     try:
         posterior = posterior_from_payload(payload.posterior, payload.intervals)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    if not settings.openai_api_key and not settings.gemini_api_key:
+        import time as _time
+
+        rng = random.Random(int(_time.time()))
+        pool = DEMO_REPLIES[posterior.most_likely().name_lower]
+        reply = rng.choice(pool)
+        return {"reply": reply, "_demo": True}
 
     system = build_system_prompt(posterior)
     # EXTERNAL SERVICE call.

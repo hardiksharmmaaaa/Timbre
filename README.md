@@ -1,8 +1,9 @@
 # Timbre
 
-A voice-emotion-aware companion bot that reads the user's emotional state from prosodic and
-spectral voice features, quantifies the uncertainty, and uses it to adapt an LLM reply + TTS
-output. Research deliverable for an ML course.
+A voice-emotion-aware companion prototype that estimates vocal affect from prosodic and
+spectral voice features and uses that uncertain estimate to adapt an LLM reply. Vocal affect
+does not establish a person's internal emotional state. TTS integration is a planned part of
+the end-to-end workflow. Research deliverable for an ML course.
 
 ```
 voice → [1. features] → [2. PCA/LLE] → [3. HMM/Viterbi] → [4. Bayesian uncertainty]
@@ -43,6 +44,14 @@ make test      # pytest
 make lint      # ruff
 make ci        # lint + test
 ```
+
+Node.js 18+ enables the frontend runtime regression tests within `make ci`. They exercise
+microphone lifecycle, WAV encoding, chat failures, and rendering fallbacks with synthetic
+browser inputs; the frontend test is skipped when Node.js is unavailable.
+
+Live microphone clips are converted to PCM WAV in the browser and resampled to the configured
+training sample rate by the backend. Keep feature settings consistent between extraction,
+training, and serving; existing model artifacts do not store the full feature configuration.
 
 ## Project layout
 

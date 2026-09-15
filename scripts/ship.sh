@@ -48,6 +48,9 @@ blocked_files=()
 while IFS= read -r file; do
   [[ -z "$file" ]] && continue
   case "$file" in
+    .env.example|*/.env.example)
+      continue
+      ;;
     .env|.env.*|*/.env|*/.env.*|*.pem|*.key|*.p12|*.pfx|*credentials*|*secret*)
       blocked_files+=("$file")
       ;;

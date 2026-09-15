@@ -53,7 +53,12 @@ let segmentTimer = null;
 let lastPosterior = {};
 let turn = 0;
 let isListening = false;
-let live = false;
+let isStartingMic = false;
+let isSendingChat = false;
+let audioContext = null;
+let inferenceSequence = 0;
+let lastRenderedInference = 0;
+let sessionStarted = false;
 
 /* ---- Mood graph ---- */
 const colors = ["#f2f0ec", "#9d8cff", "#ff7a3d", "#6e8fff", "#ff4d4d", "#c987ff", "#d98265", "#ffd166"];
@@ -63,6 +68,10 @@ let chart = null;
 
 function ensureChart() {
   if (chart) return;
+  if (typeof Chart === "undefined") {
+    document.getElementById("moodChart").setAttribute("aria-label", "Graph unavailable. Current signal is shown alongside it.");
+    return;
+  }
   chart = new Chart(document.getElementById("moodChart"), {
     type: "line",
     data: chartData,
@@ -98,7 +107,6 @@ function ensureChart() {
 
 /* ---- Service status ---- */
 function setStatus(on) {
-  live = on;
   statusDot.classList.toggle("live", on);
   statusText.textContent = on ? "Online" : "Offline";
   windowEl.textContent = `${Math.round((lastWindowMs || 2000) / 1000)}s`;
@@ -116,7 +124,13 @@ async function pingHealth() {
         lastWindowMs = d.window_ms;
         windowEl.textContent = `${Math.round(d.window_ms / 1000)}s`;
       }
-    } else setStatus(false);
+    } else {
+      setStatus(false);
+      const error = await r.json().catch(() => null);
+      statusDetail.textContent = typeof error?.detail === "string"
+        ? error.detail
+        : `backend unavailable (HTTP ${r.status})`;
+    }
   } catch (_) {
     setStatus(false);
     statusDetail.textContent = "cannot reach backend";
@@ -146,7 +160,6 @@ function renderPosterior(data) {
 
   turn += 1;
   turnEl.textContent = String(turn);
-  chatState.textContent = "analysing";
 
   // Graph
   chartData.labels.push(String(turn));
@@ -170,20 +183,57 @@ function renderPosterior(data) {
     datasets[e].data.push(probs[e] ?? 0);
   });
   ensureChart();
-  chart.update();
+  chart?.update();
 }
 
 /* ---- Audio ---- */
+async function recordingToWav(blob) {
+  // MediaRecorder defaults to WebM or MP4, which the server's WAV decoder cannot read.
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) throw new Error("This browser cannot convert microphone audio.");
+  audioContext ??= new AudioContextClass();
+  const audio = await audioContext.decodeAudioData(await blob.arrayBuffer());
+  const buffer = new ArrayBuffer(44 + audio.length * 2);
+  const view = new DataView(buffer);
+  const writeText = (offset, text) => {
+    for (let i = 0; i < text.length; i += 1) view.setUint8(offset + i, text.charCodeAt(i));
+  };
+  writeText(0, "RIFF");
+  view.setUint32(4, buffer.byteLength - 8, true);
+  writeText(8, "WAVE");
+  writeText(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // Linear PCM.
+  view.setUint16(22, 1, true); // Mono, matching feature extraction.
+  view.setUint32(24, audio.sampleRate, true);
+  view.setUint32(28, audio.sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeText(36, "data");
+  view.setUint32(40, audio.length * 2, true);
+  const channels = Array.from({ length: audio.numberOfChannels }, (_, i) => audio.getChannelData(i));
+  for (let i = 0; i < audio.length; i += 1) {
+    const average = channels.reduce((sum, channel) => sum + channel[i], 0) / channels.length;
+    const sample = Math.max(-1, Math.min(1, average));
+    view.setInt16(44 + i * 2, Math.round(sample * (sample < 0 ? 32768 : 32767)), true);
+  }
+  return new Blob([buffer], { type: "audio/wav" });
+}
+
 async function sendAudio(blob) {
-  const fd = new FormData();
-  fd.append("file", blob, "chunk.webm");
+  const sequence = ++inferenceSequence;
   try {
+    const fd = new FormData();
+    fd.append("file", await recordingToWav(blob), "chunk.wav");
     const r = await fetch(`${API}/api/inference`, { method: "POST", body: fd });
     if (!r.ok) throw new Error(await r.text());
-    renderPosterior(await r.json());
-    chatState.textContent = "analysed";
+    const data = await r.json();
+    if (sequence < lastRenderedInference) return;
+    renderPosterior(data);
+    lastRenderedInference = sequence;
+    if (!isSendingChat) chatState.textContent = "analysed";
   } catch (e) {
-    micHint.textContent = `inference error: ${e.message}`;
+    if (sequence >= lastRenderedInference) micHint.textContent = `inference error: ${e.message}`;
   }
 }
 
@@ -194,12 +244,25 @@ function recordSegment() {
   recorder = activeRecorder;
   activeRecorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
   activeRecorder.onstop = () => {
+    // A previous session's queued stop event must not restart the current session.
+    if (recorder !== activeRecorder) return;
     if (chunks.length) {
       const blob = new Blob(chunks, { type: activeRecorder.mimeType || "audio/webm" });
       sendAudio(blob);
     }
-    if (recorder === activeRecorder) recorder = null;
-    if (isListening) recordSegment();
+    recorder = null;
+    if (isListening) {
+      try {
+        recordSegment();
+      } catch (error) {
+        stopListening(`Microphone recording failed: ${error.message}`);
+      }
+    }
+  };
+  activeRecorder.onerror = (event) => {
+    if (recorder === activeRecorder) {
+      stopListening(`Microphone recording failed: ${event.error?.message || "please try again"}`);
+    }
   };
   activeRecorder.start();
   segmentTimer = setTimeout(() => {
@@ -207,30 +270,43 @@ function recordSegment() {
   }, lastWindowMs);
 }
 
+function stopListening(hint = "Session paused. Tap to resume listening.") {
+  isListening = false;
+  clearTimeout(segmentTimer);
+  segmentTimer = null;
+  const activeRecorder = recorder;
+  recorder = null;
+  if (activeRecorder?.state === "recording") activeRecorder.stop();
+  micStream?.getTracks().forEach((track) => track.stop());
+  micStream = null;
+  micBtn.classList.remove("listening");
+  micBtn.setAttribute("aria-label", "Start listening");
+  micBadge.classList.remove("active");
+  micIcon.style.color = "";
+  liveBadge.textContent = "● PAUSED";
+  liveBadge.classList.remove("live-badge");
+  micState.textContent = "Ready to listen";
+  micState.classList.remove("listening");
+  micHint.textContent = hint;
+}
+
 async function toggleMic() {
+  if (isStartingMic) return;
   if (isListening) {
-    isListening = false;
-    clearTimeout(segmentTimer);
-    if (recorder?.state === "recording") recorder.stop();
-    recorder = null;
-    micStream?.getTracks().forEach((track) => track.stop());
-    micStream = null;
-    micBtn.classList.remove("listening");
-    micBadge.classList.remove("active");
-    micIcon.style.color = "";
-    liveBadge.textContent = "● PAUSED";
-    liveBadge.classList.remove("live-badge");
-    micState.textContent = "Ready to listen";
-    micState.classList.remove("listening");
-    micHint.textContent = "Session paused. Tap to resume listening.";
-    setStatus(live); // keep service status as-is (health-based)
+    stopListening();
     return;
   }
+  isStartingMic = true;
+  micBtn.disabled = true;
   try {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      throw new Error("Microphone recording requires a supported browser on HTTPS or localhost.");
+    }
     micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     isListening = true;
     recordSegment();
     micBtn.classList.add("listening");
+    micBtn.setAttribute("aria-label", "Pause listening");
     micBadge.classList.add("active");
     micIcon.style.color = "#06231f";
     liveBadge.textContent = "● LIVE";
@@ -240,18 +316,24 @@ async function toggleMic() {
     micHint.textContent = `Speak naturally. Timbre samples a ${Math.round(lastWindowMs / 1000)}-second window.`;
     windowEl.textContent = `${Math.round(lastWindowMs / 1000)}s`;
   } catch (e) {
-    micHint.textContent = `Mic access denied: ${e.message}`;
+    stopListening(`Could not start microphone: ${e.message}`);
+  } finally {
+    isStartingMic = false;
+    micBtn.disabled = false;
   }
 }
 
 /* ---- Session transition ---- */
 function startSession() {
+  if (sessionStarted) return;
+  sessionStarted = true;
   sessionScreen.classList.add("is-hiding");
   setTimeout(() => {
     sessionScreen.style.display = "none";
     sessionContent.style.display = "block";
     sessionContent.classList.add("is-revealing");
   }, 450);
+  return toggleMic();
 }
 
 /* ---- Chat ---- */
@@ -274,7 +356,8 @@ function addMsg(sender, text) {
 async function sendChat(e) {
   e.preventDefault();
   const text = userText.value.trim();
-  if (!text) return;
+  if (!text || isSendingChat) return;
+  isSendingChat = true;
   addMsg("user", text);
   userText.value = "";
   sendBtn.disabled = true;
@@ -286,10 +369,15 @@ async function sendChat(e) {
       body: JSON.stringify({ text, posterior: lastPosterior.posterior, intervals: lastPosterior.intervals, most_likely: lastPosterior.most_likely }),
     });
     const data = await r.json();
-    addMsg("bot", data.reply || "(no reply — LLM API key not configured)");
-    chatState.textContent = "idle";
+    if (!r.ok) {
+      throw new Error(typeof data.detail === "string" ? data.detail : `Request failed (${r.status})`);
+    }
+    addMsg("bot", data.reply || "No reply was returned. Please try again.");
   } catch (err) {
     addMsg("bot", `error: ${err.message}`);
+  } finally {
+    isSendingChat = false;
+    sendBtn.disabled = !userText.value.trim();
     chatState.textContent = "idle";
   }
 }
@@ -298,7 +386,7 @@ async function sendChat(e) {
 startSessionBtn.addEventListener("click", startSession);
 micBtn.addEventListener("click", toggleMic);
 chatForm.addEventListener("submit", sendChat);
-userText.addEventListener("input", () => { sendBtn.disabled = !userText.value.trim(); });
+userText.addEventListener("input", () => { sendBtn.disabled = isSendingChat || !userText.value.trim(); });
 sendBtn.disabled = true;
 pingHealth();
 setInterval(pingHealth, 5000);

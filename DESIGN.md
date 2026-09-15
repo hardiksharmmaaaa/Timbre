@@ -71,11 +71,13 @@ Rules:
 ### 4.1 Sources
 | Dataset | Use | Size | Emotion encoding |
 |---------|-----|------|------------------|
-| RAVDESS | train/val (primary) | ~1,440 clips | 3rd filename field (01=sad … 08=surprised) |
+| RAVDESS | train/val (primary) | ~1,440 clips | 3rd filename field (01=neutral … 08=surprised) |
 | TESS | quick POC | ~2,800 | folder/name prefix |
 | CREMA-D | cross-dataset generalization | ~7,442 | filename token |
 
 Emotion label must be **parsed from filenames** — never from folder placement assumptions.
+RAVDESS discovery validates all seven filename fields and selects audio-only speech (`03-01`)
+regardless of whether the archive contains an `Audio_Speech` parent directory.
 
 ### 4.2 Feature extraction (frame semantics)
 - Window: **25 ms**; stride: **10 ms** (defaults; configurable in config `feature`).
@@ -88,7 +90,8 @@ Emotion label must be **parsed from filenames** — never from folder placement 
 - **Deterministic, seeded, and speaker-independent** (SEED in config, default 42). Assign each
   RAVDESS actor wholly to train, validation, or test; never split at frame level or allow an
   actor to cross partitions.
-- INDEX files: `data/splits/ravdess_train.json` etc. — lists of clip ids + labels.
+- Index file: `data/splits/ravdess_splits.json` — `train`, `val`, and `test` clip-to-label
+  mappings, plus the seed and disjoint actor groups in `metadata`.
 - Personal/native-language test set lives as its own split json and is excluded from training.
 
 ### 4.4 Repro wiring
@@ -127,6 +130,10 @@ Emotion label must be **parsed from filenames** — never from folder placement 
      mean-field surrogate (recommended middle ground), 3. **MCMC/Gibbs** (full rigor, slow —
      batch/offline only, not real-time).
 - Output: `EmotionPosterior` with per-state probability **and credible intervals**.
+- Current implementation uses uncertainty surrogates: `hybrid` and `vi` return heuristic
+  widths, while the compatibility selector `mcmc` samples independent probability vectors
+  from a Dirichlet surrogate. It is not full HMM posterior inference or Gibbs sampling.
+  See `docs/report.md` for the pseudo-count model and its calibration limitations.
 - **Real-time mandate**: streaming inference must stay under a latency budget (see §7). If
   MCMC exceeds it, ship the VI path in `api` and keep MCMC as an offline eval artifact.
 
@@ -144,7 +151,7 @@ Hand-written scoring + visualizations, all deterministic:
 
 ### 7.1 FastAPI app (`api/main.py`)
 Endpoints:
-- `POST /api/inference` — accepts audio chunk (raw PCM or WAV), runs
+- `POST /api/inference` — accepts an uploaded audio file (the browser sends PCM WAV), runs
   features → reduction → HMM → Bayesian, returns `EmotionPosterior`.
 - `POST /api/chat` — takes posterior + user text → injects prompt → returns LLM reply + TTS URL.
 - `GET /api/health` — model loaded? version? latency stats.
@@ -154,6 +161,10 @@ Endpoints:
   default ~2000 ms). Inference runs on the window.
 - Latency budget: **< ~300 ms** end-to-end for perception. If PCA+HMM+VI exceeds it, reduce
   window, trim MFCC count, or downsample frames before decode.
+- Decode and perception execute in a worker thread so they do not block unrelated API
+  requests. Live waveforms are resampled to the configured training sample rate before
+  extracting features. Empty, non-finite, and unreadable audio receives HTTP 400; incomplete
+  model artifacts receive HTTP 503. Health checks load available models before reporting mode.
 - HMM/Viterbi state **resets at utterance boundaries** (detected by VAD/silence) — documented
   decision so the sequence model doesn't carry state across turns.
 
@@ -167,7 +178,10 @@ Endpoints:
 
 ## 8. Frontend (`frontend/`)
 - `index.html` + `app.js` + `style.css` — single-page app, no build step.
-- Browser mic via `getUserMedia()`; `MediaRecorder` → blob → POST chunk to `/api/inference`.
+- Browser mic via `getUserMedia()`; `MediaRecorder` → browser audio decoding → mono 16-bit
+  PCM WAV → POST chunk to `/api/inference`. This avoids sending WebM/MP4 containers to the
+  backend's libsndfile decoder. Microphone startup, pause, failure cleanup, and overlapping
+  requests have deterministic JavaScript regression tests.
 - Renders reply from `/api/chat` and plays TTS audio.
 - **Mood graph**: Chart.js or Plotly line/area chart — X = conversation turns, Y = emotion
   probability, confidence-interval bands. Fed by `/api/inference` responses.

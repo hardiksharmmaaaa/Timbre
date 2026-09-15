@@ -70,3 +70,22 @@ def test_viterbi_class_score_is_length_normalized():
     model = _TinyModel()
     _, raw = viterbi_decode(model, np.zeros((3, 1)))
     assert score_viterbi_sequences(model, [np.zeros((3, 1))]) == [raw / 3]
+
+
+def test_viterbi_never_starts_in_an_impossible_state():
+    model = _TinyModel()
+    model.startprob_ = np.array([1.0, 0.0])
+    model._ll = np.array([[-1000.0, 0.0]])
+    states, score = viterbi_decode(model, np.zeros((1, 1)))
+    assert states.tolist() == [0]
+    assert score == -1000.0
+
+
+def test_viterbi_never_takes_an_impossible_transition():
+    model = _TinyModel()
+    model.startprob_ = np.array([1.0, 0.0])
+    model.transmat_ = np.eye(2)
+    model._ll = np.array([[0.0, -1000.0], [-1000.0, 0.0]])
+    states, score = viterbi_decode(model, np.zeros((2, 1)))
+    assert states.tolist() == [0, 0]
+    assert score == -1000.0

@@ -59,8 +59,11 @@ def viterbi_decode(model, obs: np.ndarray) -> tuple[np.ndarray, float]:
     T = obs.shape[0]
     n = model.n_components
 
-    log_start = np.log(model.startprob_ + 1e-300)
-    log_a = np.log(model.transmat_ + 1e-300)
+    # Zero probabilities are impossible states/transitions, even when a forbidden path
+    # would have much higher emission scores. Keep their log probabilities at -infinity.
+    with np.errstate(divide="ignore"):
+        log_start = np.log(model.startprob_)
+        log_a = np.log(model.transmat_)
     log_b = model._compute_log_likelihood(obs)  # (T, n) log P(o_t | s_t)
 
     # delta[t][j] = max log prob of any path ending in state j at time t.

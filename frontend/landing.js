@@ -99,6 +99,7 @@
     const canvas = document.getElementById("scannerCanvas");
     if (!canvas) return;
     const context = canvas.getContext("2d");
+    if (!context) return;
     let width = 0;
     let height = 0;
     let frame = 0;
@@ -177,7 +178,13 @@
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 100);
     camera.position.z = 7;
-    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    let renderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    } catch (_) {
+      // The CSS hero remains visible when hardware acceleration is unavailable.
+      return;
+    }
     renderer.setPixelRatio(Math.min(devicePixelRatio, 1.8));
     renderer.setSize(innerWidth, innerHeight);
 

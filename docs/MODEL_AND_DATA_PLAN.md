@@ -394,10 +394,11 @@ because they are optional and access-controlled. A personal/native-language eval
 be collected separately under the consent and retention rules in Section 5.7.
 
 Download completion does not make the combined pipeline training-ready. The current extractor
-discovers only RAVDESS-style files and, with the downloaded Zenodo directory layout, presently
-returns zero clips because it requires `Audio_Speech` in the path. Split generation and training
-also remain hard-coded to RAVDESS. Dataset-specific parsers, a canonical manifest, deterministic
-speaker-disjoint splits, and multi-dataset training support must be implemented before running
+discovers only RAVDESS-style files. Its former dependence on `Audio_Speech` in the path is fixed:
+discovery validates filename fields and accepts the downloaded Zenodo actor-directory layout.
+Split generation and training remain hard-coded to RAVDESS. Dataset-specific parsers, a canonical
+manifest, deterministic speaker-disjoint splits, and multi-dataset training support must be
+implemented before running
 the first main experiment.
 
 ## 8. Preprocessing Plan
