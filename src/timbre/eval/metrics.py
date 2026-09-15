@@ -24,12 +24,12 @@ def accuracy(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 def balanced_accuracy(y_true: np.ndarray, y_pred: np.ndarray, n_classes: int) -> float:
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
-    recall = np.zeros(n_classes)
+    recall = []
     for c in range(n_classes):
         mask = y_true == c
         if mask.sum() > 0:
-            recall[c] = (y_pred[mask] == c).mean()
-    return float(recall[recall > 0].mean())
+            recall.append((y_pred[mask] == c).mean())
+    return float(np.mean(recall))
 
 
 def confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray, n_classes: int) -> np.ndarray:
@@ -50,7 +50,7 @@ def expected_calibration_error(y_true: np.ndarray, probs: np.ndarray, n_bins: in
     ece = 0.0
     for i in range(n_bins):
         lo, hi = bins[i], bins[i + 1]
-        mask = (probs > lo) & (probs <= hi)
+        mask = ((probs >= lo) if i == 0 else (probs > lo)) & (probs <= hi)
         if mask.sum() == 0:
             continue
         acc = (y_true[mask] == 1).mean()  # binary-correct within bin

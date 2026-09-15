@@ -62,7 +62,9 @@ def extract_frame_features(y: np.ndarray, sr: int) -> np.ndarray:
     f0 = np.expand_dims(f0, axis=-1)
 
     # Speaking rate: negative of silence ratio over a sliding window (~1s).
-    voice = librosa.effects.split(y, top_db=30)
+    # librosa uses the clip peak as its dB reference; an all-zero clip otherwise appears
+    # entirely voiced because its energy equals that reference.
+    voice = librosa.effects.split(y, top_db=30) if np.any(y) else []
     voiced_mask = np.zeros(len(y), dtype=bool)
     for start, end in voice:
         voiced_mask[start:end] = True

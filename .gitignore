@@ -7,11 +7,10 @@ build/
 dist/
 
 # Data & models (large, reproducible)
-data/raw/
-data/processed/
-data/splits/
+data/
 models/
 experiments/
+recordings/
 
 # Secrets
 .env
@@ -19,6 +18,11 @@ experiments/
 # Media
 *.wav
 *.mp3
+*.webm
+*.ogg
+*.flac
+*.m4a
+*.opus
 *.npz
 *.joblib
 *.pkl

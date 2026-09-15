@@ -37,27 +37,22 @@ def test_empty_audio_is_rejected():
         extract_frame_features(np.array([]), 22050)
 
 
-def test_extract_file_matches_direct():
-    import librosa
+def test_silent_audio_has_zero_speaking_rate():
+    features = extract_frame_features(np.zeros(2205), 22050)
+    assert np.count_nonzero(features[:, -1]) == 0
 
-    sr = 16000
-    y, _ = librosa.load(librosa.ex("trumpet"), sr=sr, duration=1.0)
-    direct = extract_frame_features(y, sr)
-    # Saving/loading round-trip: librosa resamples to target sr on load, so shapes must match
-    # and features should be close (not bitwise) — a float-precision tolerance.
-    import tempfile
 
+def test_extract_file_matches_direct(tmp_path):
     import soundfile as sf
 
-    with tempfile.NamedTemporaryFile(suffix=".wav") as f:
-        sf.write(f.name, y, sr)
-        via_file, _ = load_and_extract(f.name, sr=sr)
-    assert via_file.shape == direct.shape
-    # librosa resamples on load, so exact equality is not expected; features must be strongly
-    # correlated (same signal, same extraction) rather than identical.
-    for col in range(direct.shape[1]):
-        a, b = direct[:, col], via_file[:, col]
-        if a.std() < 1e-6:  # constant column (e.g. fully-voiced rate) — just match sign
-            continue
-        corr = np.corrcoef(a, b)[0, 1]
-        assert corr > 0.99
+    # A local deterministic chirp keeps this test independent of network access and
+    # librosa's example-audio cache.
+    sr = 16000
+    time = np.arange(sr, dtype=float) / sr
+    y = (0.4 * np.sin(2 * np.pi * (220 * time + 80 * time**2))).astype(np.float32)
+    direct = extract_frame_features(y, sr)
+    path = tmp_path / "chirp.wav"
+    sf.write(path, y, sr, subtype="FLOAT")
+    via_file, loaded_sr = load_and_extract(str(path), sr=sr)
+    assert loaded_sr == sr
+    np.testing.assert_allclose(via_file, direct)

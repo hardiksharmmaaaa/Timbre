@@ -3,12 +3,14 @@
 Instead of the HMM returning a single argmax, we estimate a *posterior distribution* over
 emotional states with uncertainty, producing e.g. "72% stressed, 20% tired, ±8%".
 
-Implementation note (DESIGN.md §5.3): full MCMC over an HMM is computationally costly for
-real-time streaming. We ship a set of strategies with increasing rigor:
-  - "hybrid": closed-form softmax over log-likelihoods + a Dirichlet-style uncertainty rise
-              as evidence shrinks (fast, real-time safe).
-  - "vi":     mean-field variational surrogate over state responsibilities.
-  - "mcmc":   Gibbs sampling — the most principled, but batch/offline only.
+These are uncertainty surrogates, not inference over HMM parameter uncertainty:
+  - "hybrid": tempered softmax with heuristic interval widths.
+  - "vi":     iterative responsibility surrogate with heuristic interval widths.
+  - "mcmc":   compatibility name for independent samples from a Dirichlet surrogate,
+              using normalized scores as pseudo-observation weights.
+
+The sampling path is neither a Markov chain nor Gibbs inference. Its intervals describe
+only the specified surrogate; no method here establishes calibration on held-out speech.
 
 At inference the API uses whichever `settings.bayesian_method` selects.
 """
@@ -16,6 +18,7 @@ At inference the API uses whichever `settings.bayesian_method` selects.
 from __future__ import annotations
 
 from collections.abc import Iterable
+from numbers import Integral
 
 import numpy as np
 
@@ -34,36 +37,44 @@ def posterior_from_log_likelihoods(
     n_frames: int,
     method: str | None = None,
 ) -> EmotionPosterior:
-    """Turn per-state (log-)likelihood evidence into a calibrated-looking posterior.
+    """Hand-implemented uncertainty surrogates over per-state log evidence.
 
     Args:
         log_likelihoods: mapping state -> log P(obs | state).
-        n_frames: number of observation frames (uncertainty shrinks as this grows).
-        method: "hybrid" | "vi" | "mcmc".
+        n_frames: positive integer number of frames, used as pseudo-observation count.
+        method: "hybrid" | "vi" | "mcmc" (independent Dirichlet sampling alias).
 
     Returns:
-        EmotionPosterior with per-state probabilities and credible-interval half-widths.
+        EmotionPosterior with probabilities and surrogate uncertainty half-widths.
     """
+    if isinstance(n_frames, bool) or not isinstance(n_frames, Integral) or n_frames <= 0:
+        raise ValueError("n_frames must be a positive integer")
     method = (method or settings.bayesian_method).lower()
     states = list(log_likelihoods.keys())
     logits = np.array([log_likelihoods[s] for s in states], dtype=float)
+    if (
+        logits.size == 0
+        or np.isnan(logits).any()
+        or np.isposinf(logits).any()
+        or not np.isfinite(logits).any()
+    ):
+        raise ValueError("log likelihoods must include finite evidence and no NaN or +inf")
 
     if method == "hybrid":
         return _hybrid(states, logits, n_frames)
     if method == "vi":
         return _vi(states, logits, n_frames)
     if method == "mcmc":
-        return _mcmc(states, logits, n_frames)
+        return _dirichlet_surrogate(states, logits, n_frames)
     raise ValueError(f"unknown bayesian_method {method!r}")
 
 
 def _hybrid(states, logits, n_frames) -> EmotionPosterior:
     """Softmax over log-likelihoods with a confidence scaling by evidence size.
 
-    This is the "fast" path — not a full Bayesian treatment but a calibrated softmax whose
-    sharpness is tempered when fewer frames are available (honest about short/noisy input).
+    Its sharpness is tempered when fewer frames are available. This does not establish
+    calibration, and the returned widths are heuristic rather than empirical intervals.
     """
-    probs = _normalise(logits)
     # Temperature rises (flatter posterior) when evidence is thin.
     temp = 1.0 + 0.5 * np.exp(-n_frames / 40.0)
     probs = _normalise(logits / temp)
@@ -82,33 +93,25 @@ def _vi(states, logits, n_frames) -> EmotionPosterior:
     return _build_posterior(states, probs, n_frames)
 
 
-def _mcmc(states, logits, n_frames, n_samples: int = 4000, burnin: int = 1000) -> EmotionPosterior:
-    """Gibbs sampling over a Dirichlet-categorical model.
+def _dirichlet_surrogate(states, logits, n_frames, n_samples: int = 4000) -> EmotionPosterior:
+    """Library-backed independent sampling from a documented Dirichlet surrogate.
 
-    Full rigor, batch/offline only. Samples the latent categorical per frame and aggregates;
-    the categorical is driven by the log-likelihood evidence (each state's per-frame score).
-    Returned intervals are empirical credible intervals from the posterior draws.
+    A uniform Dirichlet prior receives ``n_frames * softmax(logits)`` pseudo-counts.
+    These weights are derived from class scores; frames are not observed emotion labels
+    or assumed to be independently labelled data. Concentration is K + n_frames.
+
+    Draw probability vectors directly: no Markov chain or burn-in is required. Summarize
+    the 2.5th/97.5th percentiles with a symmetric half-width that encloses both quantiles
+    about the sample mean. These are surrogate intervals, not calibrated coverage claims.
     """
     rng = np.random.default_rng(settings.seed)
-    # Treat logits[.] as per-sequence log-evidence; build a scaled alpha concentration so the
-    # Dirichlet prior strongly prefers high-evidence states while remaining proper.
-    p_prior = _normalise(logits) + 1e-6
-    p_prior = p_prior / p_prior.sum()
-    alpha = p_prior * (n_frames / max(n_frames, 1.0) + 1.0) * 10.0
-
-    draws = np.zeros(len(states))
-    for _ in range(burnin + n_samples):
-        # Gibbs: sample latent category from Dirichlet mean (concentration-weighted).
-        probs = rng.dirichlet(alpha)
-        k = rng.choice(len(states), p=probs)
-        if _ >= burnin:
-            draws[k] += 1
-
-    emp = draws / draws.sum()
-    # Empirical 95% credible half-width per state from the sampled categorical.
-    interval = np.full(len(states), np.sqrt(emp * (1 - emp) / max(n_samples, 1)) * 1.96)
+    alpha = 1.0 + n_frames * _normalise(logits)
+    draws = rng.dirichlet(alpha, size=n_samples)
+    probs = draws.mean(axis=0)
+    lower, upper = np.quantile(draws, [0.025, 0.975], axis=0)
+    interval = np.maximum(probs - lower, upper - probs)
     return EmotionPosterior(
-        probs={s: float(p) for s, p in zip(states, emp)},
+        probs={s: float(p) for s, p in zip(states, probs)},
         intervals={s: float(i) for s, i in zip(states, interval)},
     )
 

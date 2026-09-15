@@ -21,9 +21,7 @@ def load_features(dataset: str) -> list[tuple[str, int, int]]:
     """Return ``(clip_id, label, actor_id)`` for one processed dataset."""
     dirp = settings.processed_dir / dataset
     clips = []
-    for npz in dirp.glob("*.npz"):
-        import numpy as np
-
+    for npz in sorted(dirp.glob("*.npz")):
         with np.load(npz) as data:
             clips.append((npz.stem, int(data["label"]), parse_ravdess_actor(npz.name)))
     return clips
@@ -46,8 +44,9 @@ def split_by_actor(
         raise ValueError("at least three actors are required for train/val/test splits")
     rng = np.random.default_rng(seed)
     rng.shuffle(actors)
-    n_val = max(1, round(actors.size * val_frac))
-    n_test = max(1, round(actors.size * test_frac))
+    # Rounded holdouts must leave at least one actor in every partition.
+    n_test = min(max(1, round(actors.size * test_frac)), actors.size - 2)
+    n_val = min(max(1, round(actors.size * val_frac)), actors.size - n_test - 1)
     test_actors = set(actors[:n_test].tolist())
     val_actors = set(actors[n_test:n_test + n_val].tolist())
     train_actors = set(actors[n_test + n_val:].tolist())

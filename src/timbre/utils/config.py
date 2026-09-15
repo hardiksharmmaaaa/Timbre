@@ -28,29 +28,30 @@ class Settings(BaseSettings):
     experiment_dir: Path = ROOT / "experiments"
 
     # Feature extraction (frame semantics)
-    frame_ms: int = 25
-    stride_ms: int = 10
-    n_mfcc: int = 20
-    sample_rate: int = 22050
+    frame_ms: int = Field(default=25, gt=0)
+    stride_ms: int = Field(default=10, gt=0)
+    n_mfcc: int = Field(default=20, gt=0)
+    sample_rate: int = Field(default=22050, gt=0)
 
     # Reduction
-    n_components: int = 8
+    n_components: int = Field(default=8, gt=0)
     reduction_method: str = "pca"  # "pca" | "lle"
 
     # HMM
-    hmm_n_states: int = 3  # latent acoustic regimes within each emotion-specific HMM
-    hmm_n_states_emission_gmm: int = 1  # components per Gaussian mixture emission
-    hmm_n_iter: int = 100
+    hmm_n_states: int = Field(default=3, gt=0)  # acoustic regimes per emotion-specific HMM
+    hmm_n_states_emission_gmm: int = Field(default=1, gt=0)  # Gaussian mixture components
+    hmm_n_iter: int = Field(default=100, gt=0)
 
     # Bayesian layer
     bayesian_method: str = "vi"  # "vi" | "hybrid" | "mcmc"
 
     # Inference
     window_ms: int = Field(
-        default=2000, validation_alias=AliasChoices("INFERENCE_WINDOW_MS", "WINDOW_MS")
+        default=2000, gt=0, validation_alias=AliasChoices("INFERENCE_WINDOW_MS", "WINDOW_MS")
     )
     latency_budget_ms: int = Field(
         default=300,
+        gt=0,
         validation_alias=AliasChoices("INFERENCE_LATENCY_BUDGET_MS", "LATENCY_BUDGET_MS"),
     )
     reset_on_silence: bool = True

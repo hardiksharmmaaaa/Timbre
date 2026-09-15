@@ -42,7 +42,7 @@ def main() -> None:
     from timbre.hmm.decoder import score_viterbi_sequences
 
     seqs, y_true = load_eval_sequences("test")
-    n_classes = int(y_true.max()) + 1
+    n_classes = max(int(y_true.max()), *pipe.state_ids) + 1
     pred_pairs = []
     conf_scores = []
 
@@ -54,9 +54,8 @@ def main() -> None:
         for sid in pipe.state_ids:
             model = pipe.state_models[sid]
             log_ll[sid] = score_viterbi_sequences(model, [reduced])[0]
-        ml = max(log_ll, key=log_ll.get)
         posterior = PerceptionPipeline.bayes_reconstruct(log_ll, reduced.shape[0])
-        pred_pairs.append(ml)
+        pred_pairs.append(int(posterior.most_likely()))
         conf_scores.append(posterior.confidence)
         if i % 50 == 0:
             log.info("scored %d/%d", i, len(seqs))

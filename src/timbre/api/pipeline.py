@@ -16,6 +16,7 @@ from timbre.bayesian.posterior import posterior_from_log_likelihoods
 from timbre.core.types import EmotionPosterior
 from timbre.features.extractor import extract_frame_features
 from timbre.reduction.reducer import reduce_sequences
+from timbre.utils.config import settings
 
 
 @dataclass
@@ -50,6 +51,12 @@ class PerceptionPipeline:
         return posterior_from_log_likelihoods(ll_by_state, n_frames, method=method)
 
     def infer(self, y: np.ndarray, sr: int, method: str | None = None) -> EmotionPosterior:
+        # Match the sample rate used by load_and_extract when building training features.
+        if sr != settings.sample_rate:
+            import librosa
+
+            y = librosa.resample(y, orig_sr=sr, target_sr=settings.sample_rate)
+            sr = settings.sample_rate
         # Stage 1: features
         feats = extract_frame_features(y, sr)  # (T, nf)
         # Stage 2: reduction
@@ -62,7 +69,7 @@ class PerceptionPipeline:
         log_likelihoods = {}
         for sid in self.state_ids:
             model = self.state_models[sid]
-            log_likelihoods[sid] = score_viterbi_sequences([reduced], model)[0]
+            log_likelihoods[sid] = score_viterbi_sequences(model, [reduced])[0]
 
         # Stage 4: Bayesian posterior over states.
         from timbre.core.types import EmotionState
