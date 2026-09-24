@@ -1,0 +1,13 @@
+{
+  "duration": 20,
+  "maxStaticSec": 2.5,
+  "assertions": [
+    { "kind": "appearsBy", "selector": "#heroTitle", "bySec": 1.9 },
+    { "kind": "before", "a": "#startControl", "b": "#signalDashboard" },
+    { "kind": "appearsBy", "selector": "#signalDashboard", "bySec": 9.5 },
+    { "kind": "staysInFrame", "selector": "#sessionProductShell" },
+    { "kind": "staysInFrame", "selector": "#signalDashboard" },
+    { "kind": "appearsBy", "selector": "#safetyLine", "bySec": 16.8 },
+    { "kind": "keepsMoving", "withinSelector": "#root", "maxStaticSec": 2.5 }
+  ]
+}

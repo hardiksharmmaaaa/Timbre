@@ -1,0 +1,3 @@
+Introducing Timbre: vocal context for conversational AI, with uncertainty kept visible.
+
+A voice is a signal, not a confession.
