@@ -212,12 +212,14 @@ def _infer_audio(raw: bytes) -> dict:
     if pipe is None:
         return _mock_inference()
     posterior = pipe.infer(y, sr)
+    abstained = pipe.should_abstain(posterior) if hasattr(pipe, "should_abstain") else False
 
     return {
         "posterior": {k.name_lower: v for k, v in posterior.probs.items()},
         "intervals": {k.name_lower: v for k, v in posterior.intervals.items()},
-        "most_likely": posterior.most_likely().name_lower,
+        "most_likely": "unknown" if abstained else posterior.most_likely().name_lower,
         "confidence": posterior.confidence,
+        "abstained": abstained,
     }
 
 

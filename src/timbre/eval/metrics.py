@@ -59,6 +59,24 @@ def expected_calibration_error(y_true: np.ndarray, probs: np.ndarray, n_bins: in
     return float(ece)
 
 
+def multiclass_brier_score(
+    y_true: np.ndarray, probabilities: np.ndarray, class_ids: list[int]
+) -> float:
+    """Mean squared probability error against one-hot multiclass outcomes."""
+    y_true = np.asarray(y_true)
+    probabilities = np.asarray(probabilities, dtype=float)
+    if probabilities.shape != (y_true.size, len(class_ids)):
+        raise ValueError("probability matrix shape does not match labels/classes")
+    index = {class_id: position for position, class_id in enumerate(class_ids)}
+    try:
+        positions = np.array([index[int(label)] for label in y_true])
+    except KeyError as exc:
+        raise ValueError(f"unknown true class: {exc.args[0]}") from exc
+    target = np.zeros_like(probabilities)
+    target[np.arange(y_true.size), positions] = 1.0
+    return float(np.mean(np.sum(np.square(probabilities - target), axis=1)))
+
+
 def run_and_record(run_name: str, metrics: dict) -> Path:
     """Write a metrics blob + manifest into experiments/<run_name>/, timestamped."""
     run_dir = settings.experiment_dir / f"{run_name}"

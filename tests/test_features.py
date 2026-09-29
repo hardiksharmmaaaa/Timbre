@@ -1,6 +1,7 @@
 """Tests for framewise feature extraction on synthetic signals."""
 
 import numpy as np
+import pytest
 
 from timbre.features.extractor import extract_frame_features, frame_lengths, load_and_extract
 
@@ -31,15 +32,23 @@ def test_no_nan_and_finite():
 
 
 def test_empty_audio_is_rejected():
-    import pytest
-
     with pytest.raises(ValueError, match="non-empty mono"):
         extract_frame_features(np.array([]), 22050)
 
 
 def test_silent_audio_has_zero_speaking_rate():
     features = extract_frame_features(np.zeros(2205), 22050)
+    assert np.count_nonzero(features[:, -2]) == 0
     assert np.count_nonzero(features[:, -1]) == 0
+
+
+def test_tone_has_expected_median_pitch():
+    sample_rate = 16000
+    time = np.arange(sample_rate, dtype=float) / sample_rate
+    features = extract_frame_features(0.2 * np.sin(2 * np.pi * 220 * time), sample_rate)
+    voiced_pitch = features[features[:, -2] > 0, -2]
+
+    assert np.median(voiced_pitch) == pytest.approx(220, abs=3)
 
 
 def test_extract_file_matches_direct(tmp_path):

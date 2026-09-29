@@ -150,8 +150,8 @@ def refresh_tracker(text: str, verified_on: date, branch: str) -> str:
             f"`git diff --check` passed on {verified_date}",
         ),
         ("Version control", "Branch synchronization"): (
-            "Pass",
-            f"Tracker refreshed for `{branch}` before commit and push on {verified_date}",
+            "Pending",
+            f"Tracker refreshed for `{branch}` on {verified_date}; commit and push remain pending",
         ),
         ("Release gate", "Repository validation"): (
             "Pass",
@@ -222,7 +222,7 @@ def main() -> int:
         parser.error("--checks-passed is required; run make ci first")
 
     repo_root = Path(__file__).resolve().parents[1]
-    tracker_path = repo_root / "tracker.md"
+    tracker_path = repo_root / "docs" / "tracker.md"
     branch = validate_repository(repo_root)
     current = tracker_path.read_text(encoding="utf-8")
     refreshed = refresh_tracker(current, date.today(), branch)

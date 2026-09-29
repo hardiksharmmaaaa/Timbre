@@ -343,8 +343,10 @@ crema_0001,CREMA-D,1022,angry,16000,train
 tess_0001,TESS,YAF,happy,24414,external_test
 ```
 
-The canonical manifest does not exist yet. Dataset-specific parsers and manifest generation are
-the next data-engineering milestone.
+The canonical `six_class_v1` manifest now exists locally under `data/manifests/`. It records
+10,890 accepted clips and eight explicit exclusions, and is frozen by SHA-256 alongside the
+speaker-disjoint split. Generated manifests remain ignored because they contain local source
+paths and dataset metadata; reproducibility counts and hashes are documented in the tracker.
 
 ## Raw, Processed, Split, Model, and Experiment Files
 
@@ -366,8 +368,8 @@ modified and never committed.
 
 ### Manifest Files
 
-Planned `.csv` files under `data/manifests/`, including the retained corpus and exclusions with
-documented reasons.
+Generated `.csv` files under `data/manifests/`, including the retained corpus and exclusions with
+documented reasons, plus a summary and manifest hash.
 
 ### Split Files
 
@@ -432,19 +434,20 @@ because it recognizes the same voice during testing.
 
 ## Current Implementation Status
 
-As of 20 September 2026:
+As of 24 September 2026:
 
-- The raw datasets are present.
-- RAVDESS filename validation and discovery are implemented.
-- CREMA-D and TESS canonical parsers are not implemented.
-- The shared manifest does not exist.
-- Dataset-wide audio integrity screening is not implemented.
-- The multi-dataset speaker-disjoint split is not frozen.
-- `data/processed/`, `data/splits/`, `models/`, and `experiments/` contain no generated outputs.
-- The executable scripts currently support only the older RAVDESS eight-class route.
+- All raw datasets are present and remain untracked.
+- RAVDESS, CREMA-D, and TESS canonical parsers are implemented and tested.
+- The shared manifest and exact-audio/integrity exclusions are frozen and hashed.
+- Development speakers are disjoint across train, validation, and test within each dataset.
+- TESS is locked to external test.
+- All 10,890 accepted clips have hash-validated cached features.
+- A separate cache contains one deterministic RIRS reverberation for each of 5,848 training clips.
+- Baseline, pooled six-class HMM, calibration, evaluation, and augmentation-ablation commands are
+  implemented but have not yet produced fitted models or measured results.
 
-The six-class pooled model must not be described as trained until the multi-dataset data
-foundation, model artifacts, and evaluation results actually exist.
+The six-class pooled model must not be described as trained until model artifacts and evaluation
+results actually exist.
 
 ## Known Dataset Limitations
 
@@ -474,4 +477,4 @@ The next implementation batch should:
 6. Extract and cache features from the retained clips.
 
 Further architectural and research decisions are documented in
-[`docs/MODEL_AND_DATA_PLAN.md`](docs/MODEL_AND_DATA_PLAN.md).
+[`MODEL_AND_DATA_PLAN.md`](MODEL_AND_DATA_PLAN.md).

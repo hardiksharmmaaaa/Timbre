@@ -7,6 +7,7 @@ from timbre.eval.metrics import (
     balanced_accuracy,
     confusion_matrix,
     expected_calibration_error,
+    multiclass_brier_score,
 )
 
 
@@ -47,3 +48,10 @@ def test_perfectly_calibrated_model_has_low_ece():
     correct = (rng.uniform(0.0, 1.0, n) < probs).astype(float)
     ece = expected_calibration_error(correct, probs, n_bins=10)
     assert ece < 0.05
+
+
+def test_multiclass_brier_score_is_zero_for_perfect_probabilities():
+    labels = np.array([1, 3])
+    probabilities = np.array([[1.0, 0.0], [0.0, 1.0]])
+
+    assert multiclass_brier_score(labels, probabilities, [1, 3]) == 0.0

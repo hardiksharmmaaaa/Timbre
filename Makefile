@@ -3,8 +3,9 @@
 PYTHON := .venv/bin/python
 PIP := .venv/bin/pip
 UVICORN := .venv/bin/uvicorn
+WORKERS ?= 4
 
-.PHONY: setup data-download data-extract data-split train evaluate serve lint test ci tracker-update ship clean
+.PHONY: setup data-download data-prepare data-extract data-augment data-split data-ready data-augment-ready train-baselines train train-all train-augmented calibrate calibrate-augmented evaluate evaluate-augmented test-models augmentation-ablation serve lint test ci tracker-update ship clean
 
 setup:
 	python3 -m venv .venv
@@ -14,17 +15,57 @@ setup:
 data-download:
 	$(PYTHON) -m scripts.download_data
 
-data-extract:
-	$(PYTHON) -m scripts.extract_features
+data-prepare:
+	$(PYTHON) -m scripts.prepare_data --workers $(WORKERS)
 
+data-extract:
+	$(PYTHON) -m scripts.extract_features --workers $(WORKERS)
+
+data-augment:
+	$(PYTHON) -m scripts.extract_augmented_features --workers $(WORKERS)
+
+# Compatibility alias; canonical preparation now freezes splits before extraction.
 data-split:
-	$(PYTHON) -m scripts.make_splits
+	$(PYTHON) -m scripts.prepare_data --workers $(WORKERS)
+
+data-ready:
+	$(PYTHON) -m scripts.verify_data
+
+data-augment-ready:
+	$(PYTHON) -m scripts.verify_data --augmented
+
+train-baselines:
+	$(PYTHON) -m scripts.train_baselines
 
 train:
 	$(PYTHON) -m scripts.train
 
+train-augmented:
+	$(PYTHON) -m scripts.train --include-augmented --model-dir models/augmented
+
+calibrate:
+	$(PYTHON) -m scripts.calibrate
+
+calibrate-augmented:
+	$(PYTHON) -m scripts.calibrate --model-dir models/augmented
+
+train-all: data-ready
+	$(MAKE) train-baselines
+	$(MAKE) train
+	$(MAKE) calibrate
+
 evaluate:
 	$(PYTHON) -m scripts.evaluate
+
+evaluate-augmented:
+	$(PYTHON) -m scripts.evaluate --model-dir models/augmented --run-name six_class_v1_augmented
+
+test-models: evaluate
+
+augmentation-ablation: data-ready data-augment data-augment-ready
+	$(MAKE) train-augmented
+	$(MAKE) calibrate-augmented
+	$(MAKE) evaluate-augmented
 
 serve:
 	$(UVICORN) timbre.api.main:app --reload --port 8000
@@ -47,6 +88,6 @@ ship:
 	@bash scripts/ship.sh "$(MESSAGE)"
 
 clean:
-	rm -rf data/processed/* models/* experiments/* .venv
+	rm -rf data/manifests/* data/processed/* data/processed_augmented/* data/splits/* models/* experiments/* .venv
 
 ## to run the app: make serve
