@@ -1,7 +1,7 @@
 # Timbre Model, Data, and Training Plan
 
 **Status:** Team planning document
-**Last reviewed:** 12 September 2026
+**Last reviewed:** 24 September 2026
 **Scope:** Speech-emotion perception, local voice-assistant components, datasets, training,
 evaluation, and implementation milestones
 
@@ -393,13 +393,15 @@ MUSAN was not downloaded because it is optional. IEMOCAP and MSP-Podcast were no
 because they are optional and access-controlled. A personal/native-language evaluation set must
 be collected separately under the consent and retention rules in Section 5.7.
 
-Download completion does not make the combined pipeline training-ready. The current extractor
-discovers only RAVDESS-style files. Its former dependence on `Audio_Speech` in the path is fixed:
-discovery validates filename fields and accepts the downloaded Zenodo actor-directory layout.
-Split generation and training remain hard-coded to RAVDESS. Dataset-specific parsers, a canonical
-manifest, deterministic speaker-disjoint splits, and multi-dataset training support must be
-implemented before running
-the first main experiment.
+The canonical preparation run on 24 September 2026 screened 10,898 six-class candidates and
+retained 10,890. It excluded six files involved in three conflicting-label exact-audio pairs,
+one same-label duplicate, and one nearly silent clip. The frozen split contains 5,848 training,
+1,318 validation, 1,324 in-domain test, and 2,400 TESS external-test clips. Its manifest SHA-256
+is `2e59f4c0a7447516c09dd2fac6564087fe27aca54e809750c8853f3f79545e1a`.
+
+Dataset-specific parsing, integrity screening, per-dataset speaker splitting, canonical feature
+caching, baseline/HMM training commands, validation calibration, and test/TESS evaluation are
+implemented. Model artifacts and performance results do not exist until those commands are run.
 
 ## 8. Preprocessing Plan
 
@@ -426,12 +428,11 @@ The initial frame configuration remains:
 - Fundamental frequency (F0)
 - Voiced proportion
 
-The present F0 search range begins at musical note C3, approximately 131 Hz, which can miss many
-lower-pitched voices. Make the range configurable and begin evaluation around 50–500 Hz.
+F0 uses deterministic YIN over a configurable 50--500 Hz search range. A separate 50 ms pitch
+window provides enough context for lower voices while retaining the shared 10 ms hop grid.
 
-The current feature named “speaking rate” is a voiced proportion or silence-ratio descriptor,
-not syllables or words per second. Rename it for accuracy, or implement a genuine speaking-rate
-estimator as a later experiment.
+The activity feature is named voiced proportion. It is not syllables or words per second; a
+genuine speaking-rate estimator remains a possible later experiment.
 
 Consider adding clearly documented feature ablations:
 
@@ -595,25 +596,35 @@ Required ablations:
 All results must include the number of clips and speakers evaluated. Avoid reporting a single
 headline accuracy without its split and class distribution.
 
-## 12. Current Repository Gaps
+## 12. Current Repository State and Gaps
 
-The design mentions several datasets and services, but the present implementation does not yet
-support the full plan:
+The six-class data and experiment contract is now implemented:
 
-1. `scripts/download_data.py` assumes ZIP URLs and cannot correctly retrieve every official
-   source, particularly CREMA-D's Git LFS audio.
-2. `scripts/extract_features.py` discovers and parses only RAVDESS speech files.
-3. `scripts/make_splits.py` applies the RAVDESS actor filename parser to every dataset.
-4. `scripts/train.py` reads only `processed/RAVDESS`.
-5. There is no canonical cross-dataset label mapping or shared manifest.
-6. Baseline training is mentioned in the design but is not wired into `scripts/train.py`.
-7. The browser records emotion chunks, but chat text is still typed; STT is missing.
-8. The TTS function is a generic HTTP placeholder rather than a complete provider integration.
-9. The Bayesian intervals are currently heuristic and are not validated credible intervals.
-10. The F0 range risks excluding lower voices.
-11. The feature called speaking rate is currently voiced proportion.
+1. Dataset-specific RAVDESS, CREMA-D, and TESS parsers map shared labels and speaker IDs.
+2. Preparation writes a hashed canonical manifest, explicit exclusions, quality measurements,
+   CREMA-D voice-vote agreement, and deterministic per-dataset speaker splits.
+3. TESS is locked to `external_test`; it cannot enter training or validation through the
+   canonical commands.
+4. Feature caches retain source hashes and the complete 16 kHz extraction contract.
+5. Baseline, pooled HMM, validation calibration, abstention, and test/TESS evaluation commands
+   consume the same frozen manifest and reject incompatible artifacts.
+6. F0 uses a configurable 50--500 Hz range with a separate 50 ms analysis window. The final
+   feature remains voiced proportion rather than a claim of words or syllables per second.
 
-These gaps should be treated as implementation milestones, not hidden limitations.
+Important remaining gaps are:
+
+1. Full baseline/HMM training, calibration, and evaluation still need to be executed; implemented
+   commands are not evidence of model quality.
+2. A deterministic RIRS training-only reverberation ablation is implemented but remains unrun;
+   broader noise/SNR augmentation remains future work.
+3. The browser records emotion chunks, but chat text is still typed; STT is missing.
+4. The TTS function is a generic HTTP placeholder rather than a complete provider integration.
+5. Heuristic uncertainty intervals are not validated credible intervals; only the fitted class
+   probabilities can be evaluated for calibration after training.
+6. `scripts/download_data.py` remains a ZIP helper and is not the supported CREMA-D Git LFS
+   acquisition path.
+
+These gaps must remain visible until their exit criteria have actually passed.
 
 ## 13. Reproducibility Requirements
 

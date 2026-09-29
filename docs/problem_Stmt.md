@@ -160,15 +160,15 @@ Dataset details are documented in [`data.md`](data.md).
 - Posterior-shaped vocal-affect responses and uncertainty surrogates.
 - FastAPI audio inference endpoint and browser microphone capture.
 - A fixed-window demonstration interface and mood graph.
-- RAVDESS-only extraction, speaker-disjoint splitting, training, and evaluation scripts.
+- Canonical RAVDESS/CREMA-D/TESS parsing, integrity screening, frozen speaker splits, and caches.
+- Pooled baseline/HMM training, validation calibration, test/TESS evaluation, and a separate
+  training-only reverberation-ablation workflow.
 
 ### Planned or Incomplete
 
-- Canonical CREMA-D and TESS parsers and shared manifest.
-- Dataset-wide integrity and duplicate screening.
-- Frozen pooled six-class speaker-disjoint splits.
-- Pooled six-class feature cache, baseline models, HMM artifacts, and measured results.
-- Empirical probability calibration and validated abstention.
+- Fitted pooled six-class baseline/HMM artifacts and measured results.
+- Executed validation calibration and empirically measured abstention behaviour.
+- Executed training-only augmentation comparison.
 - Complete utterance segmentation through voice activity detection.
 - Speech-to-text and complete spoken-response wiring.
 - UAE Arabic, code-switching, accent, and real service-environment evaluation.
@@ -342,5 +342,5 @@ Representative local evaluation is necessary before commercial claims are made.
 
 - [`README.md`](README.md)
 - [`DESIGN.md`](DESIGN.md)
-- [`docs/MODEL_AND_DATA_PLAN.md`](docs/MODEL_AND_DATA_PLAN.md)
+- [`MODEL_AND_DATA_PLAN.md`](MODEL_AND_DATA_PLAN.md)
 - [`tracker.md`](tracker.md)

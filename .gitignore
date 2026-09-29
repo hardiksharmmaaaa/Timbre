@@ -7,10 +7,10 @@ build/
 dist/
 
 # Data & models (large, reproducible)
-data/
-models/
-experiments/
-recordings/
+/data/
+/models/
+/experiments/
+/recordings/
 
 # Secrets
 .env

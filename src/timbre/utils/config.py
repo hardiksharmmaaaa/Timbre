@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -22,7 +22,9 @@ class Settings(BaseSettings):
     # Data locations (relative to repo root)
     data_root: Path = ROOT / "data"
     raw_dir: Path = ROOT / "data" / "raw"
+    manifest_dir: Path = ROOT / "data" / "manifests"
     processed_dir: Path = ROOT / "data" / "processed"
+    augmentation_dir: Path = ROOT / "data" / "processed_augmented"
     splits_dir: Path = ROOT / "data" / "splits"
     model_dir: Path = ROOT / "models"
     experiment_dir: Path = ROOT / "experiments"
@@ -31,7 +33,10 @@ class Settings(BaseSettings):
     frame_ms: int = Field(default=25, gt=0)
     stride_ms: int = Field(default=10, gt=0)
     n_mfcc: int = Field(default=20, gt=0)
-    sample_rate: int = Field(default=22050, gt=0)
+    sample_rate: int = Field(default=16000, gt=0)
+    f0_frame_ms: int = Field(default=50, gt=0)
+    f0_min_hz: float = Field(default=50.0, gt=0)
+    f0_max_hz: float = Field(default=500.0, gt=0)
 
     # Reduction
     n_components: int = Field(default=8, gt=0)
@@ -71,12 +76,22 @@ class Settings(BaseSettings):
     crema_url: str = ""
     tess_url: str = ""
 
+    @model_validator(mode="after")
+    def validate_feature_bounds(self) -> Settings:
+        if self.f0_min_hz >= self.f0_max_hz:
+            raise ValueError("F0_MIN_HZ must be less than F0_MAX_HZ")
+        if self.f0_max_hz >= self.sample_rate / 2:
+            raise ValueError("F0_MAX_HZ must be below the Nyquist frequency")
+        return self
+
 
 settings = Settings()
 
 # Ensure output dirs exist
 for _d in (
+    settings.manifest_dir,
     settings.processed_dir,
+    settings.augmentation_dir,
     settings.splits_dir,
     settings.model_dir,
     settings.experiment_dir,

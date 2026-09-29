@@ -43,7 +43,7 @@ class Clip:
     path: str
     label: EmotionState
     features: np.ndarray | None = None  # (nframes, nfeatures) or None if not yet extracted
-    sr: int = 22050
+    sr: int = 16000
 
 
 @dataclass

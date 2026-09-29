@@ -36,9 +36,14 @@ dev = [
 
 [project.scripts]
 timbre-download = "scripts.download_data:main"
+timbre-prepare = "scripts.prepare_data:main"
 timbre-extract = "scripts.extract_features:main"
-timbre-split = "scripts.make_splits:main"
+timbre-extract-augmented = "scripts.extract_augmented_features:main"
+timbre-split = "scripts.prepare_data:main"
+timbre-verify-data = "scripts.verify_data:main"
+timbre-train-baselines = "scripts.train_baselines:main"
 timbre-train = "scripts.train:main"
+timbre-calibrate = "scripts.calibrate:main"
 timbre-evaluate = "scripts.evaluate:main"
 
 [tool.setuptools.packages.find]

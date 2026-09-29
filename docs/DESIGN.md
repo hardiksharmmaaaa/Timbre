@@ -38,7 +38,7 @@ student's own ML contribution) is explicitly separated from **glue** (off-the-sh
 
 | Module | Pipeline stage | Ownership | Responsibility |
 |--------|----------------|-----------|----------------|
-| `features/` | 1 | **Built by me** | framewise feature extraction (F0, RMS, MFCCs, speaking rate) |
+| `features/` | 1 | **Built by me** | framewise feature extraction (F0, RMS, MFCCs, voiced proportion) |
 | `reduction/` | 2 | **Built by me** | PCA + LLE dimensionality reduction, fit/transform |
 | `hmm/` | 3 | **Built by me** | HMM (emission/transition) + hand-written Viterbi decoder |
 | `bayesian/` | 4 | **Built by me** | MCMC/VI posterior over emotion states + credible intervals |
@@ -71,9 +71,9 @@ Rules:
 ### 4.1 Sources
 | Dataset | Use | Size | Emotion encoding |
 |---------|-----|------|------------------|
-| RAVDESS | train/val (primary) | ~1,440 clips | 3rd filename field (01=neutral … 08=surprised) |
-| TESS | quick POC | ~2,800 | folder/name prefix |
-| CREMA-D | cross-dataset generalization | ~7,442 | filename token |
+| RAVDESS | pooled development | 1,056 six-class candidates | 3rd filename field |
+| CREMA-D | pooled development | 7,442 candidates | filename token |
+| TESS | untouched external test | 2,400 six-class candidates | filename suffix |
 
 Emotion label must be **parsed from filenames** — never from folder placement assumptions.
 RAVDESS discovery validates all seven filename fields and selects audio-only speech (`03-01`)
@@ -81,8 +81,8 @@ regardless of whether the archive contains an `Audio_Speech` parent directory.
 
 ### 4.2 Feature extraction (frame semantics)
 - Window: **25 ms**; stride: **10 ms** (defaults; configurable in config `feature`).
-- Per frame: **F0/pitch** (`librosa.pyin`), **RMS energy**, **MFCCs (13–20 coeffs)**,
-  **VAD-derived speaking rate** (silence ratio over a sliding window).
+- Per frame: **F0/pitch** (energy-gated `librosa.yin`, 50 ms analysis window), **RMS energy**,
+  **MFCCs (20 coefficients)**, and **voiced proportion**.
 - Output: one `FeatureSequence` per clip, written to `data/processed/<dataset>/<id>.npz`
   as `{"features": (nframes, nf), "sr": int, "label": int}`.
 
@@ -90,8 +90,8 @@ regardless of whether the archive contains an `Audio_Speech` parent directory.
 - **Deterministic, seeded, and speaker-independent** (SEED in config, default 42). Assign each
   RAVDESS actor wholly to train, validation, or test; never split at frame level or allow an
   actor to cross partitions.
-- Index file: `data/splits/ravdess_splits.json` — `train`, `val`, and `test` clip-to-label
-  mappings, plus the seed and disjoint actor groups in `metadata`.
+- Index file: `data/splits/six_class_v1.json` — frozen clip IDs, manifest hash, seed, and
+  disjoint speaker groups per development dataset.
 - Personal/native-language test set lives as its own split json and is excluded from training.
 
 ### 4.4 Repro wiring

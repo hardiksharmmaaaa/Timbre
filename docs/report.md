@@ -3,8 +3,8 @@
 This directory holds the write-up. Scaffolding notes below; expand per milestone.
 
 ## Framing
-- **Contributions (built by us):** framewise feature extraction (F0, RMS, MFCCs, speaking
-  rate), PCA/LLE reduction, HMM + hand-written Viterbi decoder, Bayesian uncertainty layer
+- **Contributions (built by us):** framewise feature extraction (F0, RMS, MFCCs, voiced
+  proportion), PCA/LLE reduction, HMM + hand-written Viterbi decoder, Bayesian uncertainty layer
   (softmax, responsibility, and Dirichlet surrogates), evaluation/calibration harness.
 - **Glue (off-the-shelf, not claimed):** LLM API, TTS API (see `src/timbre/glue/`).
 - **Research framing:** "adapted a classical sequence-modeling technique (HMM + Viterbi) to a

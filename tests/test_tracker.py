@@ -86,21 +86,21 @@ def test_parse_tracker_rejects_non_table_content() -> None:
 
 
 def test_repository_tracker_has_table_and_highlighted_progress_footer() -> None:
-    tracker_path = Path(__file__).resolve().parents[1] / "tracker.md"
+    tracker_path = Path(__file__).resolve().parents[1] / "docs" / "tracker.md"
     rows = parse_tracker(tracker_path.read_text(encoding="utf-8"))
 
     assert find_row(rows, "Workflow", "Next engineering task")[3] == (
-        "Pipeline: Dataset-specific parsers"
+        "Baselines: Logistic regression and random forest"
     )
     assert select_next_task(rows) == (
-        "Pipeline",
-        "Dataset-specific parsers",
-        "Implement canonical six-class mappings",
+        "Baselines",
+        "Logistic regression and random forest",
+        "Run `make train-all` on the frozen six-class split",
     )
-    assert calculate_progress(rows) == (8, 18, 44, 23)
+    assert calculate_progress(rows) == (13, 18, 72, 13)
     tracker_text = tracker_path.read_text(encoding="utf-8")
-    assert "\n\n## Project Progress\n\n> **44% complete**" in tracker_text
-    assert "Estimated effort remaining: 23 developer-days" in tracker_text
+    assert "\n\n## Project Progress\n\n> **72% complete**" in tracker_text
+    assert "Estimated effort remaining: 13 developer-days" in tracker_text
     assert "| Progress |" not in tracker_text
 
 
