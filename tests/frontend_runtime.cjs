@@ -24,13 +24,14 @@ function element() {
     addEventListener(name, handler) { this.handlers[name] = handler; },
     setAttribute(name, value) { this[name] = value; },
     appendChild(child) { this.children.push(child); },
+    replaceChildren(...children) { this.children = children; },
     remove() {},
     getContext() { return null; },
   };
 }
 
 function loadApp(options = {}) {
-  const html = fs.readFileSync(path.join(frontend, "index.html"), "utf8");
+  const html = fs.readFileSync(path.join(frontend, "session.html"), "utf8");
   const elements = Object.fromEntries([...html.matchAll(/id="([^"]+)"/g)]
     .map((match) => [match[1], element()]));
   const timers = new Map();
@@ -76,7 +77,8 @@ function loadApp(options = {}) {
       }
     } },
     setTimeout: (callback) => { timers.set(++timerId, callback); return timerId; },
-    clearTimeout: (id) => timers.delete(id), setInterval() {},
+    clearTimeout: (id) => timers.delete(id),
+    setInterval: () => ++timerId, clearInterval() {},
     ...(options.chart === false ? {} : { Chart: class { update() {} } }),
   });
   vm.runInContext(fs.readFileSync(path.join(frontend, "app.js"), "utf8"), context);
@@ -106,6 +108,41 @@ test("Start voice session requests the microphone as promised by the page", asyn
   await app.elements.startSessionBtn.handlers.click();
   assert.equal(app.streams.length, 1);
   assert.equal(app.recorders[0].state, "recording");
+});
+
+test("ending a session releases the microphone and shows a completed room", async () => {
+  const app = loadApp();
+  await app.elements.startSessionBtn.handlers.click();
+  app.elements.endSessionBtn.handlers.click();
+  assert.equal(app.streams[0].getTracks()[0].stopped, true);
+  assert.equal(vm.runInContext("sessionStarted", app.context), false);
+  assert.equal(app.elements.sessionContent.style.display, "none");
+  assert.equal(app.elements.sessionEnded.style.display, "grid");
+  assert.match(app.elements.endedSessionId.textContent, /^TMBR-/);
+});
+
+test("starting a fresh room resets the previous session state", async () => {
+  const app = loadApp();
+  await app.elements.startSessionBtn.handlers.click();
+  app.elements.log.children.push(element());
+  app.elements.turnEl.textContent = "3";
+  app.elements.endSessionBtn.handlers.click();
+  app.elements.startNewSessionBtn.handlers.click();
+  assert.equal(app.elements.sessionScreen.style.display, "grid");
+  assert.equal(app.elements.turnEl.textContent, "0");
+  assert.equal(app.elements.log.children.length, 1);
+  assert.equal(app.elements.sendBtn.disabled, true);
+});
+
+test("every live-demo link opens the dedicated session route in a new tab", () => {
+  const html = fs.readFileSync(path.join(frontend, "index.html"), "utf8");
+  const demoLinks = [...html.matchAll(/<a[^>]+href="\/session"[^>]*>/g)].map((match) => match[0]);
+  assert.ok(demoLinks.length >= 4);
+  for (const link of demoLinks) {
+    assert.match(link, /target="_blank"/);
+    assert.match(link, /rel="noopener"/);
+  }
+  assert.doesNotMatch(html, /id="startSessionBtn"/);
 });
 
 test("recorder startup failure releases the microphone and resets listening", async () => {

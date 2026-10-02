@@ -37,7 +37,7 @@ const intervalEl = document.getElementById("intervalEl");
 const turnEl = document.getElementById("turnEl");
 const windowEl = document.getElementById("windowEl");
 const logEl = document.getElementById("log");
-const chatEmpty = document.getElementById("chatEmpty");
+let chatEmpty = document.getElementById("chatEmpty");
 const chatForm = document.getElementById("chatForm");
 const userText = document.getElementById("userText");
 const sendBtn = document.getElementById("sendBtn");
@@ -45,6 +45,18 @@ const chatState = document.getElementById("chatState");
 const sessionScreen = document.getElementById("sessionScreen");
 const sessionContent = document.getElementById("sessionContent");
 const startSessionBtn = document.getElementById("startSessionBtn");
+const joinSessionBtn = document.getElementById("joinSessionBtn");
+const sessionIdEl = document.getElementById("sessionId");
+const controlSessionId = document.getElementById("controlSessionId");
+const sessionTimer = document.getElementById("sessionTimer");
+const micControlLabel = document.getElementById("micControlLabel");
+const endSessionBtn = document.getElementById("endSessionBtn");
+const leaveTopBtn = document.getElementById("leaveTopBtn");
+const sessionEnded = document.getElementById("sessionEnded");
+const endedSessionId = document.getElementById("endedSessionId");
+const endedDuration = document.getElementById("endedDuration");
+const endedWindows = document.getElementById("endedWindows");
+const startNewSessionBtn = document.getElementById("startNewSessionBtn");
 
 /* ---- State ---- */
 let recorder = null;
@@ -59,6 +71,48 @@ let audioContext = null;
 let inferenceSequence = 0;
 let lastRenderedInference = 0;
 let sessionStarted = false;
+let roomCode = "";
+let sessionStartedAt = 0;
+let sessionTimerHandle = null;
+let sessionDurationSeconds = 0;
+
+function createRoomCode() {
+  const suffix = Math.random().toString(36).slice(2, 6).toUpperCase().padEnd(4, "0");
+  return `TMBR-${suffix}`;
+}
+
+function setRoomCode(code = createRoomCode()) {
+  roomCode = code;
+  sessionIdEl.textContent = code;
+  controlSessionId.textContent = code;
+}
+
+function formatDuration(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
+  const seconds = (totalSeconds % 60).toString().padStart(2, "0");
+  return `${minutes}:${seconds}`;
+}
+
+function updateSessionTimer() {
+  sessionDurationSeconds = Math.max(0, Math.floor((Date.now() - sessionStartedAt) / 1000));
+  sessionTimer.textContent = formatDuration(sessionDurationSeconds);
+  sessionTimer.setAttribute("datetime", `PT${sessionDurationSeconds}S`);
+}
+
+function startSessionTimer() {
+  sessionStartedAt = Date.now();
+  sessionDurationSeconds = 0;
+  updateSessionTimer();
+  sessionTimerHandle = setInterval(updateSessionTimer, 1000);
+}
+
+function stopSessionTimer() {
+  if (sessionStartedAt) updateSessionTimer();
+  if (sessionTimerHandle !== null && typeof clearInterval === "function") {
+    clearInterval(sessionTimerHandle);
+  }
+  sessionTimerHandle = null;
+}
 
 /* ---- Mood graph ---- */
 const colors = ["#f2f0ec", "#9d8cff", "#ff7a3d", "#6e8fff", "#ff4d4d", "#c987ff", "#d98265", "#ffd166"];
@@ -280,6 +334,7 @@ function stopListening(hint = "Session paused. Tap to resume listening.") {
   micStream?.getTracks().forEach((track) => track.stop());
   micStream = null;
   micBtn.classList.remove("listening");
+  sessionContent.classList.remove("is-listening");
   micBtn.setAttribute("aria-label", "Start listening");
   micBadge.classList.remove("active");
   micIcon.style.color = "";
@@ -288,6 +343,7 @@ function stopListening(hint = "Session paused. Tap to resume listening.") {
   micState.textContent = "Ready to listen";
   micState.classList.remove("listening");
   micHint.textContent = hint;
+  micControlLabel.textContent = "Mic on";
 }
 
 async function toggleMic() {
@@ -306,6 +362,7 @@ async function toggleMic() {
     isListening = true;
     recordSegment();
     micBtn.classList.add("listening");
+    sessionContent.classList.add("is-listening");
     micBtn.setAttribute("aria-label", "Pause listening");
     micBadge.classList.add("active");
     micIcon.style.color = "#06231f";
@@ -314,6 +371,7 @@ async function toggleMic() {
     micState.textContent = "Listening to the shape of your voice";
     micState.classList.add("listening");
     micHint.textContent = `Speak naturally. Timbre samples a ${Math.round(lastWindowMs / 1000)}-second window.`;
+    micControlLabel.textContent = "Mute";
     windowEl.textContent = `${Math.round(lastWindowMs / 1000)}s`;
   } catch (e) {
     stopListening(`Could not start microphone: ${e.message}`);
@@ -327,6 +385,10 @@ async function toggleMic() {
 function startSession() {
   if (sessionStarted) return;
   sessionStarted = true;
+  startSessionBtn.disabled = true;
+  joinSessionBtn.disabled = true;
+  leaveTopBtn.hidden = false;
+  startSessionTimer();
   sessionScreen.classList.add("is-hiding");
   setTimeout(() => {
     sessionScreen.style.display = "none";
@@ -334,6 +396,58 @@ function startSession() {
     sessionContent.classList.add("is-revealing");
   }, 450);
   return toggleMic();
+}
+
+function endSession() {
+  if (!sessionStarted) return;
+  stopSessionTimer();
+  stopListening("Session ended.");
+  sessionStarted = false;
+  sessionContent.classList.remove("is-revealing", "is-listening");
+  sessionContent.style.display = "none";
+  leaveTopBtn.hidden = true;
+  endedSessionId.textContent = roomCode;
+  endedDuration.textContent = formatDuration(sessionDurationSeconds);
+  endedWindows.textContent = String(turn);
+  sessionEnded.style.display = "grid";
+}
+
+function startNewSession() {
+  sessionEnded.style.display = "none";
+  sessionScreen.style.display = "grid";
+  sessionScreen.classList.remove("is-hiding");
+  startSessionBtn.disabled = false;
+  joinSessionBtn.disabled = false;
+  sessionTimer.textContent = "00:00";
+  sessionTimer.setAttribute("datetime", "PT0S");
+  turn = 0;
+  turnEl.textContent = "0";
+  lastPosterior = {};
+  emotionLabel.textContent = "Awaiting voice";
+  emotionLabel.style.color = "";
+  emotionIcon.textContent = "◌";
+  emotionIcon.style.color = "";
+  confidencePct.textContent = "—";
+  intervalEl.textContent = "± —";
+  ringFg.style.strokeDashoffset = 327;
+  chartData.labels.length = 0;
+  Object.values(datasets).forEach((dataset) => { dataset.data.length = 0; });
+  chart?.update();
+  logEl.replaceChildren();
+  chatEmpty = document.createElement("div");
+  chatEmpty.className = "chat-empty";
+  chatEmpty.id = "chatEmpty";
+  const emptyIcon = document.createElement("span");
+  emptyIcon.textContent = "◎";
+  const emptyCopy = document.createElement("p");
+  emptyCopy.textContent = "Speak, inspect the signal, then write what is on your mind.";
+  chatEmpty.appendChild(emptyIcon);
+  chatEmpty.appendChild(emptyCopy);
+  logEl.appendChild(chatEmpty);
+  userText.value = "";
+  sendBtn.disabled = true;
+  chatState.textContent = "idle";
+  setRoomCode();
 }
 
 /* ---- Chat ---- */
@@ -384,9 +498,18 @@ async function sendChat(e) {
 
 /* ---- Wire up ---- */
 startSessionBtn.addEventListener("click", startSession);
+joinSessionBtn.addEventListener("click", startSession);
 micBtn.addEventListener("click", toggleMic);
+endSessionBtn.addEventListener("click", endSession);
+leaveTopBtn.addEventListener("click", endSession);
+startNewSessionBtn.addEventListener("click", startNewSession);
 chatForm.addEventListener("submit", sendChat);
 userText.addEventListener("input", () => { sendBtn.disabled = isSendingChat || !userText.value.trim(); });
 sendBtn.disabled = true;
+setRoomCode();
 pingHealth();
 setInterval(pingHealth, 5000);
+window.addEventListener?.("beforeunload", () => {
+  if (isListening) stopListening("Session closed.");
+  stopSessionTimer();
+});

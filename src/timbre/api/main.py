@@ -6,6 +6,7 @@ Endpoints:
   POST /api/inference       -> audio chunk in / EmotionPosterior out
   POST /api/chat            -> user text + posterior in / reply + tts out
   GET  /                    -> static frontend
+  GET  /session             -> dedicated voice-session frontend
 
 When no trained models are present, inference falls back to a demo mock that generates
 plausible posteriors so the full UI can be tested end-to-end without data/training.
@@ -260,3 +261,9 @@ app.mount("/static", StaticFiles(directory=str(FRONTEND)), name="static")
 @app.get("/", include_in_schema=False)
 def index():
     return FileResponse(str(FRONTEND / "index.html"))
+
+
+@app.get("/session", include_in_schema=False)
+def session():
+    """Serve the focused live-demo room separately from the marketing site."""
+    return FileResponse(str(FRONTEND / "session.html"))

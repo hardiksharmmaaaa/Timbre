@@ -17,7 +17,7 @@
   <header class="site-nav" id="siteNav">
     <a class="wordmark" href="#top" aria-label="Timbre home"><span class="wordmark-signal" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Timbre</a>
     <nav class="nav-links" aria-label="Primary navigation"><a href="#product">Product</a><a href="#method">Method</a><a href="#use-cases">Use cases</a><a href="#safety">Safety</a></nav>
-    <a class="nav-cta" href="#experience">Try live demo <span>↗</span></a>
+    <a class="nav-cta" href="/session" target="_blank" rel="noopener">Try live demo <span>↗</span></a>
   </header>
   <main>
     <section class="hero" id="top">
@@ -27,7 +27,7 @@
         <p class="eyebrow hero-reveal"><span class="status-pulse"></span> Voice intelligence / signal online</p>
         <h1 class="hero-title"><span class="hero-reveal">Voice carries</span><span class="kinetic-line hero-reveal"><span class="kinetic-word" id="kineticWord">tone.</span><span class="kinetic-ghost" aria-hidden="true">tone.</span></span></h1>
         <p class="hero-intro hero-reveal">Timbre turns the way something is said—pitch, rhythm, energy, texture—into an uncertainty-aware signal a conversational AI can actually use.</p>
-        <div class="hero-actions hero-reveal"><a class="primary-action" href="#experience">Try live demo <span>↗</span></a><a class="text-action" href="#method">View methodology</a></div>
+        <div class="hero-actions hero-reveal"><a class="primary-action" href="/session" target="_blank" rel="noopener">Try live demo <span>↗</span></a><a class="text-action" href="#method">View methodology</a></div>
       </div>
       <div class="hero-caption hero-reveal"><span>Research prototype</span><i></i><span>Vocal affect ≠ internal state</span></div>
       <a class="scroll-note" href="#why" aria-label="Scroll to learn more"><span>Explore</span><i></i></a>
@@ -42,7 +42,7 @@
           <div class="scanner-readout"><span id="scannerPhrase">“I’m fine.”</span><small>ACOUSTIC WINDOW<br>02.0 SEC</small></div>
         </div>
         <div class="scanner-result"><div><small>STRONGEST ACOUSTIC PATTERN</small><strong id="scannerTone">STEADY</strong></div><div class="scanner-confidence"><span><i id="scannerBar"></i></span><small id="scannerConfidence">64% / ESTIMATE</small></div></div>
-        <div class="scanner-foot"><span>VOCAL PATTERN ≠ INTERNAL TRUTH</span><a href="#experience">OPEN LIVE SYSTEM ↗</a></div>
+        <div class="scanner-foot"><span>VOCAL PATTERN ≠ INTERNAL TRUTH</span><a href="/session" target="_blank" rel="noopener">OPEN LIVE SYSTEM ↗</a></div>
       </div>
     </section>
     <section class="proof-strip" aria-label="Research implementation highlights">
@@ -82,32 +82,11 @@
     </section>
     <section class="boundary" id="safety"><p class="section-kicker reveal">04 / Safety</p><p class="boundary-copy reveal">A voice is a signal,<br><span>not a confession.</span></p><div class="boundary-foot reveal"><p>Timbre estimates patterns in how a voice sounds. It does not know how someone truly feels, and ambiguity remains visible in the output.</p><span>Vocal affect ≠ internal state</span></div></section>
     <section class="product-stage" id="experience">
-      <div class="product-heading"><div><p class="section-kicker reveal">05 / Live demo</p><h2 class="display-heading reveal">Inspect the signal<br><span class="accent-text">in real time.</span></h2></div><p class="section-lede reveal">A two-second audio window becomes a probability distribution you can inspect. When no trained artifact is installed, the interface identifies mock inference as demo mode.</p></div>
-      <div class="product-shell reveal">
-        <div class="product-bar"><div class="shell-brand"><span class="wordmark-signal"><i></i><i></i><i></i><i></i></span>Timbre</div><div class="service-status"><span id="statusDot" class="dot"></span><span id="statusText">Connecting…</span><small id="statusDetail">service status</small></div></div>
-
-        <div class="session-screen" id="sessionScreen">
-          <div class="session-screen-inner">
-            <div class="session-pulse" aria-hidden="true"></div>
-            <button class="session-start-btn" id="startSessionBtn" aria-label="Start voice session">
-              <span class="session-ring" aria-hidden="true"></span>
-              <span class="session-ring session-ring-2" aria-hidden="true"></span>
-              <span class="session-icon" aria-hidden="true">●</span>
-            </button>
-            <p class="session-title">Ready to listen</p>
-            <p class="session-sub">Tap to begin. Timbre will analyse the shape of your voice in real time.</p>
-            <div class="session-note"><span>◎</span><span>Mic permission will be requested on start</span></div>
-          </div>
-        </div>
-
-        <div class="session-content" id="sessionContent" style="display: none;">
-          <section class="session-hero"><div class="session-copy"><p class="mono-label">Live vocal input</p><h3 class="mic-state" id="micState">Ready when you are.</h3><p class="mic-hint" id="micHint">Begin when it feels natural.</p></div><button class="mic-btn" id="micBtn" aria-label="Start listening"><span class="mic-rings" aria-hidden="true"></span><span class="mic-badge" id="micBadge" aria-hidden="true"></span><span class="mic-icon" id="micIcon" aria-hidden="true">●</span><small>LISTEN</small></button></section>
-          <div class="dashboard-grid">
-            <section class="dashboard-card emotion-card"><div class="card-head"><h3>Current signal</h3><span class="card-badge live-badge" id="liveBadge">● PAUSED</span></div><div class="emotion-body"><div class="ring-wrap"><svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-bg" cx="60" cy="60" r="52"/><circle class="ring-fg" id="ringFg" cx="60" cy="60" r="52"/></svg><div class="ring-center"><span class="ring-pct" id="confidencePct">—</span><span>confidence</span></div></div><div class="emotion-meta"><div class="emotion-label-row"><span class="emotion-icon" id="emotionIcon">◌</span><span class="emotion-label" id="emotionLabel">Awaiting voice</span></div><div class="meta-row"><span>Interval estimate</span><b id="intervalEl">± —</b></div><div class="meta-row"><span>Windows analysed</span><b id="turnEl">0</b></div><div class="meta-row"><span>Audio window</span><b id="windowEl">—</b></div></div></div></section>
-            <section class="dashboard-card graph-card"><div class="card-head"><h3>Signal over time</h3><span class="card-badge">LIVE TRACE</span></div><div class="chart-wrap"><canvas id="moodChart"></canvas></div></section>
-          </div>
-          <section class="dashboard-card chat-card"><div class="card-head"><h3>Conversation</h3><span class="card-badge" id="chatState">IDLE</span></div><div class="chat-log" id="log" aria-live="polite"><div class="chat-empty" id="chatEmpty"><span>◎</span><p>Start a session, then say what's on your mind.</p></div></div><form class="chat-form" id="chatForm"><label class="sr-only" for="userText">Message Timbre</label><input class="chat-input" id="userText" type="text" placeholder="Write a message…" autocomplete="off"/><button class="send-btn" id="sendBtn" type="submit" disabled aria-label="Send message">Send <span>↗</span></button></form></section>
-        </div>
+      <div class="product-heading"><div><p class="section-kicker reveal">05 / Live demo</p><h2 class="display-heading reveal">Your voice session<br><span class="accent-text">gets its own room.</span></h2></div><p class="section-lede reveal">Open a focused Timbre session in a new tab. Join when you are ready, manage your microphone, inspect the signal, and end the room cleanly.</p></div>
+      <div class="session-launch reveal">
+        <div class="session-launch-signal" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div><p class="mono-label">Dedicated session window</p><h3>Leave the website.<br>Enter the conversation.</h3><p>The microphone stays off until you join. The new room keeps the live signal, confidence, timeline, and conversation together without the marketing page around it.</p></div>
+        <a class="session-launch-action" href="/session" target="_blank" rel="noopener"><span>Open new session</span><b aria-hidden="true">↗</b></a>
       </div>
     </section>
     <section class="integrity" id="research">
@@ -119,12 +98,11 @@
         <div><span>Limitations</span><p>Acted English datasets and cross-lingual degradation are documented, not hidden.</p></div>
       </div>
     </section>
-    <section class="closing"><div class="closing-glow" aria-hidden="true"></div><p class="section-kicker reveal">07 / Begin</p><h2 class="display-heading reveal">More context.<br><span class="accent-text">More considered responses.</span></h2><p class="closing-copy reveal">Explore the live prototype, inspect the uncertainty, and judge the signal for yourself.</p><a class="closing-action reveal" href="#experience">Try live demo <span>↗</span></a><footer><a class="wordmark" href="#top"><span class="wordmark-signal"><i></i><i></i><i></i><i></i></span>Timbre</a><nav aria-label="Footer navigation"><a href="#method">Method</a><a href="#safety">Safety</a><a href="#research">Research</a></nav><span>Research prototype · 2026</span></footer></section>
+    <section class="closing"><div class="closing-glow" aria-hidden="true"></div><p class="section-kicker reveal">07 / Begin</p><h2 class="display-heading reveal">More context.<br><span class="accent-text">More considered responses.</span></h2><p class="closing-copy reveal">Explore the live prototype, inspect the uncertainty, and judge the signal for yourself.</p><a class="closing-action reveal" href="/session" target="_blank" rel="noopener">Try live demo <span>↗</span></a><footer><a class="wordmark" href="#top"><span class="wordmark-signal"><i></i><i></i><i></i><i></i></span>Timbre</a><nav aria-label="Footer navigation"><a href="#method">Method</a><a href="#safety">Safety</a><a href="#research">Research</a></nav><span>Research prototype · 2026</span></footer></section>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="/static/landing.js"></script><script src="/static/app.js"></script>
+  <script src="/static/landing.js"></script>
 </body>
 </html>
