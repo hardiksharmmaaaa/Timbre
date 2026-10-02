@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#050505" />
+  <meta name="description" content="A focused live Timbre voice session." />
+  <title>Timbre — Live session</title>
+  <link rel="icon" href="/static/favicon.svg?v=2" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&amp;family=Manrope:wght@400;500;600&amp;display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/session.css" />
+</head>
+<body class="session-page">
+  <div class="grain" aria-hidden="true"></div>
+  <main class="session-app">
+    <header class="session-topbar">
+      <a class="wordmark" href="/" aria-label="Return to Timbre home">
+        <span class="wordmark-signal" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        Timbre
+      </a>
+      <div class="room-identity">
+        <span>Voice session</span>
+        <b id="sessionId">ROOM —</b>
+      </div>
+      <div class="topbar-status">
+        <div class="service-status" aria-live="polite">
+          <span id="statusDot" class="dot"></span>
+          <span id="statusText">Connecting…</span>
+          <small id="statusDetail">service status</small>
+        </div>
+        <button class="topbar-leave" id="leaveTopBtn" type="button" hidden>End session</button>
+      </div>
+    </header>
+
+    <section class="session-screen session-prejoin" id="sessionScreen" aria-labelledby="prejoinTitle">
+      <div class="prejoin-grid" aria-hidden="true"></div>
+      <div class="session-screen-inner">
+        <p class="prejoin-kicker"><span></span> Personal voice room</p>
+        <div class="session-pulse" aria-hidden="true"></div>
+        <button class="session-start-btn" id="startSessionBtn" type="button" aria-label="Join voice session">
+          <span class="session-ring" aria-hidden="true"></span>
+          <span class="session-ring session-ring-2" aria-hidden="true"></span>
+          <span class="session-icon" aria-hidden="true">●</span>
+        </button>
+        <h1 class="session-title" id="prejoinTitle">Your session is ready.</h1>
+        <p class="session-sub">Join when you are ready. Timbre will ask for microphone access and begin with a short acoustic window.</p>
+        <button class="join-session-btn" id="joinSessionBtn" type="button">Join with microphone <span aria-hidden="true">↗</span></button>
+        <div class="prejoin-notes">
+          <span><i aria-hidden="true">◎</i> Microphone off until you join</span>
+          <span><i aria-hidden="true">◌</i> Vocal affect is an estimate</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="session-content" id="sessionContent" style="display: none;">
+      <div class="live-layout">
+        <section class="session-hero" aria-labelledby="micState">
+          <div class="room-live-meta">
+            <span class="live-pill"><i></i> Session live</span>
+            <time id="sessionTimer" datetime="PT0S">00:00</time>
+          </div>
+          <div class="voice-presence" aria-hidden="true">
+            <span class="presence-orbit orbit-one"></span>
+            <span class="presence-orbit orbit-two"></span>
+            <div class="voice-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="session-copy">
+            <p class="mono-label">Live vocal input</p>
+            <h1 class="mic-state" id="micState">Ready when you are.</h1>
+            <p class="mic-hint" id="micHint">Begin when it feels natural.</p>
+          </div>
+          <p class="session-boundary">Timbre estimates acoustic patterns, not a person's internal state.</p>
+        </section>
+
+        <aside class="dashboard-card emotion-card" aria-label="Current vocal signal">
+          <div class="card-head"><h2>Current signal</h2><span class="card-badge" id="liveBadge">● PAUSED</span></div>
+          <div class="emotion-body">
+            <div class="ring-wrap">
+              <svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-bg" cx="60" cy="60" r="52"/><circle class="ring-fg" id="ringFg" cx="60" cy="60" r="52"/></svg>
+              <div class="ring-center"><span class="ring-pct" id="confidencePct">—</span><span>confidence</span></div>
+            </div>
+            <div class="emotion-meta">
+              <div class="emotion-label-row"><span class="emotion-icon" id="emotionIcon">◌</span><span class="emotion-label" id="emotionLabel">Awaiting voice</span></div>
+              <div class="meta-row"><span>Interval estimate</span><b id="intervalEl">± —</b></div>
+              <div class="meta-row"><span>Windows analysed</span><b id="turnEl">0</b></div>
+              <div class="meta-row"><span>Audio window</span><b id="windowEl">—</b></div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="session-tools">
+        <section class="dashboard-card graph-card">
+          <div class="card-head"><h2>Signal over time</h2><span class="card-badge">LIVE TRACE</span></div>
+          <div class="chart-wrap"><canvas id="moodChart" aria-label="Vocal signal probability history"></canvas></div>
+        </section>
+        <section class="dashboard-card chat-card">
+          <div class="card-head"><h2>Conversation</h2><span class="card-badge" id="chatState">IDLE</span></div>
+          <div class="chat-log" id="log" aria-live="polite"><div class="chat-empty" id="chatEmpty"><span>◎</span><p>Speak, inspect the signal, then write what is on your mind.</p></div></div>
+          <form class="chat-form" id="chatForm">
+            <label class="sr-only" for="userText">Message Timbre</label>
+            <input class="chat-input" id="userText" type="text" placeholder="Write a message…" autocomplete="off" />
+            <button class="send-btn" id="sendBtn" type="submit" disabled aria-label="Send message">Send <span>↗</span></button>
+          </form>
+        </section>
+      </div>
+
+      <nav class="session-controls" aria-label="Session controls">
+        <button class="control-btn" id="micBtn" type="button" aria-label="Start listening">
+          <span class="mic-rings" aria-hidden="true"></span><span class="mic-badge" id="micBadge" aria-hidden="true"></span><span class="mic-icon" id="micIcon" aria-hidden="true">●</span><small id="micControlLabel">Mic on</small>
+        </button>
+        <div class="control-session-label"><span>In session</span><b id="controlSessionId">ROOM —</b></div>
+        <button class="end-session-btn" id="endSessionBtn" type="button"><span aria-hidden="true">■</span> End session</button>
+      </nav>
+    </div>
+
+    <section class="session-ended" id="sessionEnded" style="display: none;" aria-labelledby="sessionEndedTitle">
+      <div class="ended-mark" aria-hidden="true"><span></span></div>
+      <p class="mono-label">Session complete</p>
+      <h1 id="sessionEndedTitle">The room is closed.</h1>
+      <p>Your microphone is off and the live capture has ended.</p>
+      <dl><div><dt>Room</dt><dd id="endedSessionId">—</dd></div><div><dt>Duration</dt><dd id="endedDuration">00:00</dd></div><div><dt>Windows</dt><dd id="endedWindows">0</dd></div></dl>
+      <div class="ended-actions"><button id="startNewSessionBtn" type="button">Start a new session</button><a href="/">Return to Timbre</a></div>
+    </section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -91,6 +91,14 @@ def test_health_loads_available_model(client, monkeypatch):
     assert result["demo_mode"] is False
 
 
+def test_session_route_serves_dedicated_room(client):
+    response = client.get("/session")
+    assert response.status_code == 200
+    assert 'id="sessionScreen"' in response.text
+    assert 'id="endSessionBtn"' in response.text
+    assert 'src="/static/app.js"' in response.text
+
+
 def test_incomplete_model_returns_service_unavailable(client):
     (main.settings.model_dir / "meta.json").write_text("{}")
     response = client.post("/api/inference", files={"file": ("test.wav", wav_bytes([0.0] * 100))})
