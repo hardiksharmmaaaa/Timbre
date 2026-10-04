@@ -404,11 +404,34 @@ Training currently writes:
 models/reducer.joblib
 models/state_models.joblib
 models/meta.json
+models/baselines/knn.joblib
+models/baselines/knn_cv.json
+models/baselines/adaboost.joblib
+models/baselines/adaboost_cv.json
+models/baselines/svm.joblib
+models/baselines/svm_cv.json
 ```
 
 The reducer contains train-only scaling and PCA. The state-model file contains one Gaussian HMM
 per emotion class. Final metadata must also record feature settings, dataset versions, manifest
 and split hashes, source-code commit, dependency versions, and hyperparameters.
+
+The KNN baseline uses the same cached features, aggregated into 161 clip statistics. It selects
+neighbor count, vote weighting, and distance by five-fold speaker-disjoint cross-validation
+inside the frozen training split. Scaling is learned inside each fold. The saved pipeline is
+refitted on all training clips; its CV report preserves candidate scores and speaker folds.
+Validation, in-domain test, and TESS data remain excluded from KNN fitting and selection.
+
+AdaBoost reuses the same clip summaries and training-only speaker folds, searching tree depth,
+estimator count, and learning rate. Its tree learners require no scaling. The CV report and
+saved winner follow the same provenance contract, with `adaboost` metrics reported separately
+on the in-domain test and TESS. Neither held-out split influences model selection.
+
+SVM also reuses cached summaries and training-only speaker folds, with scaling learned inside
+each fold. It selects linear/RBF kernel, C, applicable gamma, and class weighting by mean CV
+accuracy, then refits on all training clips. The model and complete search report follow the
+same provenance contract. Both test splits include `svm` classification metrics; probability
+metrics are unavailable because SVC probability estimation is disabled.
 
 ### Experiment Files
 

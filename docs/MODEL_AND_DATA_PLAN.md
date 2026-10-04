@@ -61,7 +61,7 @@ the project's original ML contribution.
 |---|---|---:|---|
 | Voice activity detection | [Silero VAD](https://github.com/snakers4/silero-vad) | No | Detect speech and utterance boundaries |
 | Main affect classifier | Our feature/PCA/Gaussian-HMM pipeline | Yes | Primary research model |
-| Classical baselines | Scikit-learn logistic regression and random forest | Yes | Establish whether temporal modelling helps |
+| Classical baselines | Scikit-learn logistic regression, random forest, KNN, AdaBoost, and SVM | Yes | Establish whether temporal modelling helps |
 | Deep affect baseline | [Microsoft WavLM Base+](https://github.com/microsoft/unilm/tree/master/wavlm) | Classification head first | Strong modern comparison |
 | Ready-made affect check | [SpeechBrain wav2vec2-IEMOCAP](https://huggingface.co/speechbrain/emotion-recognition-wav2vec2-IEMOCAP) | No initially | Four-class integration sanity check |
 | Speech-to-text | [OpenAI Whisper](https://github.com/openai/whisper) | No | Turn microphone speech into chat text |
@@ -91,10 +91,38 @@ Train at least these baselines on clip-level summaries of the same acoustic feat
 
 - Multinomial logistic regression
 - Random forest
+- K-nearest neighbors, selected by mean speaker-disjoint cross-validation accuracy
+- AdaBoost with decision-tree weak learners, selected by the same CV accuracy protocol
+- Support vector machine, selected by the same CV accuracy protocol with fold-local scaling
 
 Useful summary statistics include the mean, standard deviation, median, minimum, maximum, and
 selected percentiles of each feature over the utterance. The comparison determines whether the
 HMM's temporal modelling provides measurable value.
+
+KNN selection searches 32 combinations of neighbor count (1, 3, 5, 7, 11, 15, 21, 31),
+uniform/distance weighting, and Manhattan/Euclidean distance. Five seeded stratified group
+folds keep speakers together and use only the frozen training split. `StandardScaler` is
+fitted within each fold. The highest mean CV accuracy wins, with parameter-grid order breaking
+exact ties; the final pipeline is refitted on all training clips. Persist all candidate fold
+scores and the selected parameters in `models/baselines/knn_cv.json`. The winner is included
+in `make train-all` and evaluated by `make test-models` on the existing test and TESS splits.
+
+AdaBoost searches 12 combinations of estimator count (50, 100), learning rate (0.1, 0.5, 1.0),
+and tree depth (1, 2) with multiclass SAMME. It uses unscaled clip summaries and the same seeded,
+speaker-disjoint training-only CV folds as KNN. Highest mean CV accuracy selects the winner,
+which is refitted on all training clips. Candidate scores, speaker folds, selected parameters,
+and provenance are saved in `models/baselines/adaboost_cv.json`; the fitted artifact is
+`adaboost.joblib`. Training and testing include it automatically. Final test and TESS scores
+are reporting-only and never select the hyperparameters.
+
+SVM searches 30 configurations: linear kernel with C 0.1/1/10, or RBF kernel with
+C 0.1/1/10/100 and gamma scale/0.001/0.01, each with class weights None/balanced.
+The highest mean accuracy on the same five training-only speaker folds wins. Scaling is
+fitted within each fold, and the winning pipeline is refitted on all training clips.
+`models/baselines/svm_cv.json` preserves all candidate scores, speaker folds, and provenance;
+`svm.joblib` stores the fitted pipeline. Training and both test evaluations include SVM.
+Its class predictions determine accuracy; probability estimation is disabled, so ECE/Brier
+and confidence-based abstention thresholds are unavailable. Final test/TESS never select parameters.
 
 ### 3.3 WavLM experiment
 
@@ -501,7 +529,8 @@ hashes are reported automatically.
 1. Aggregate frame features into clip-level statistics.
 2. Train multinomial logistic regression.
 3. Train random forest.
-4. Select hyperparameters using validation data only.
+4. Tune KNN, AdaBoost, and SVM by speaker-disjoint cross-validation within training data; reserve validation
+   for calibration and other declared model-selection protocols. Never tune on final test data.
 5. Save metrics and confusion matrices.
 
 **Exit criterion:** reproducible baseline results exist for the same split used by the HMM.
@@ -584,7 +613,7 @@ Evaluate in three settings:
 
 Required ablations:
 
-- Logistic regression versus random forest versus HMM
+- Logistic regression versus random forest versus cross-validated KNN/AdaBoost/SVM versus HMM
 - PCA versus LLE, if LLE remains supported
 - Different HMM hidden-state counts
 - Viterbi versus forward likelihood
