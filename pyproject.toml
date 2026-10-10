@@ -33,6 +33,10 @@ dev = [
     "ruff>=0.4",
     "matplotlib>=3.8",
 ]
+transfer = [
+    "torch>=2.6,<3",
+    "torchaudio>=2.6,<3",
+]
 
 [project.scripts]
 timbre-download = "scripts.download_data:main"

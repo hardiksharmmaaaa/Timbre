@@ -17,6 +17,7 @@ function element() {
   const classes = new Set();
   return {
     textContent: "", value: "", disabled: false, style: {}, children: [], handlers: {},
+    get className() { return [...classes].join(" "); },
     classList: {
       add: (name) => classes.add(name), remove: (name) => classes.delete(name),
       toggle: (name, on) => on ? classes.add(name) : classes.delete(name),
@@ -85,10 +86,8 @@ function loadApp(options = {}) {
   return { elements, context, recorders, streams, timers };
 }
 
-function submit(app, text) {
-  app.elements.userText.value = text;
-  app.elements.userText.handlers.input();
-  return app.elements.chatForm.handlers.submit({ preventDefault() {} });
+function tick() {
+  return new Promise((resolve) => setImmediate(resolve));
 }
 
 test("microphone permission requests cannot overlap on repeated clicks", async () => {
@@ -105,9 +104,11 @@ test("microphone permission requests cannot overlap on repeated clicks", async (
 
 test("Start voice session requests the microphone as promised by the page", async () => {
   const app = loadApp();
+  assert.equal(app.elements.journalRecordBtn.disabled, true);
   await app.elements.startSessionBtn.handlers.click();
   assert.equal(app.streams.length, 1);
   assert.equal(app.recorders[0].state, "recording");
+  assert.equal(app.elements.journalRecordBtn.disabled, false);
 });
 
 test("ending a session releases the microphone and shows a completed room", async () => {
@@ -124,14 +125,16 @@ test("ending a session releases the microphone and shows a completed room", asyn
 test("starting a fresh room resets the previous session state", async () => {
   const app = loadApp();
   await app.elements.startSessionBtn.handlers.click();
-  app.elements.log.children.push(element());
+  app.elements.journalEntries.children.push(element());
+  app.elements.journalState.textContent = "SAVED";
   app.elements.turnEl.textContent = "3";
   app.elements.endSessionBtn.handlers.click();
   app.elements.startNewSessionBtn.handlers.click();
   assert.equal(app.elements.sessionScreen.style.display, "grid");
   assert.equal(app.elements.turnEl.textContent, "0");
-  assert.equal(app.elements.log.children.length, 1);
-  assert.equal(app.elements.sendBtn.disabled, true);
+  assert.equal(app.elements.journalEntries.children.length, 0);
+  assert.equal(app.elements.journalState.textContent, "READY");
+  assert.equal(app.elements.journalRecordBtn.disabled, true);
 });
 
 test("every live-demo link opens the dedicated session route in a new tab", () => {
@@ -163,32 +166,52 @@ test("a stopped recorder cannot restart capture after the microphone resumes", a
   assert.equal(app.recorders[1].state, "recording");
 });
 
-test("chat displays an HTTP failure instead of claiming the API key is absent", async () => {
+test("the reflection prompt follows the analysed vocal signal and can be cycled", async () => {
   const app = loadApp({ fetch: async () => ({
-    ok: false, status: 503,
-    json: async () => ({ detail: "Companion temporarily unavailable" }),
+    ok: true,
+    json: async () => ({ posterior: { calm: 1 }, most_likely: "calm", intervals: {} }),
   }) });
-  await submit(app, "hello");
-  const last = app.elements.log.children.at(-1).children.at(-1).textContent;
-  assert.match(last, /Companion temporarily unavailable/);
-  assert.doesNotMatch(last, /API key not configured/);
+  await vm.runInContext("sendAudio(new Blob(['audio']))", app.context);
+  assert.match(app.elements.promptText.textContent, /calm/i);
+  const first = app.elements.promptText.textContent;
+  app.elements.nextPromptBtn.handlers.click();
+  assert.notEqual(app.elements.promptText.textContent, first);
+  assert.match(app.elements.promptText.textContent, /ease/i);
 });
 
-test("typing and submitting during a pending reply cannot send duplicate chat requests", async () => {
-  const response = deferred();
-  let requests = 0;
-  const app = loadApp({ fetch: () => { requests += 1; return response.promise; } });
-  const first = submit(app, "hello");
-  app.elements.userText.value = "next message";
-  app.elements.userText.handlers.input();
-  const disabledWhileSending = app.elements.sendBtn.disabled;
-  const duplicate = app.elements.chatForm.handlers.submit({ preventDefault() {} });
-  response.resolve({ ok: true, json: async () => ({ reply: "hello back" }) });
-  await Promise.all([first, duplicate]);
-  assert.equal(disabledWhileSending, true);
-  assert.equal(requests, 1);
-  assert.equal(app.elements.userText.value, "next message");
-  assert.equal(app.elements.sendBtn.disabled, false);
+test("journal recording captures a reflection and lists it with its signal", async () => {
+  const app = loadApp({ fetch: async () => ({
+    ok: true,
+    json: async () => ({ posterior: { calm: 1 }, most_likely: "calm", intervals: {} }),
+  }) });
+  await app.elements.startSessionBtn.handlers.click();
+  await vm.runInContext("sendAudio(new Blob(['audio']))", app.context);
+  await app.elements.journalRecordBtn.handlers.click();
+  const recorder = app.recorders.at(-1);
+  assert.equal(recorder.state, "recording");
+  assert.equal(app.elements.journalState.textContent, "RECORDING");
+  recorder.ondataavailable({ data: new Blob(["reflection"]) });
+  await app.elements.journalRecordBtn.handlers.click();
+  assert.equal(recorder.state, "inactive");
+  assert.equal(app.elements.journalTimer.hidden, true);
+  recorder.onstop();
+  assert.equal(app.elements.journalEntries.children.length, 1);
+  const entry = app.elements.journalEntries.children[0];
+  assert.match(entry.children[1].children[0].textContent, /CALM/);
+  await tick();
+  assert.equal(app.elements.journalState.textContent, "SAVED");
+});
+
+test("ending a session stops an in-progress reflection recording", async () => {
+  const app = loadApp();
+  await app.elements.startSessionBtn.handlers.click();
+  await app.elements.journalRecordBtn.handlers.click();
+  const recorder = app.recorders.at(-1);
+  assert.equal(recorder.state, "recording");
+  app.elements.endSessionBtn.handlers.click();
+  assert.equal(recorder.state, "inactive");
+  assert.equal(vm.runInContext("isJournalRecording", app.context), false);
+  assert.equal(app.elements.journalRecordBtn.disabled, true);
 });
 
 test("a blocked chart CDN does not turn successful inference into an error", async () => {
@@ -198,8 +221,43 @@ test("a blocked chart CDN does not turn successful inference into an error", asy
   }) });
   await vm.runInContext("sendAudio(new Blob(['audio']))", app.context);
   assert.equal(app.elements.emotionLabel.textContent, "calm");
-  assert.equal(app.elements.chatState.textContent, "analysed");
+  assert.equal(app.elements.journalState.textContent, "ANALYSED");
   assert.doesNotMatch(app.elements.micHint.textContent, /error/);
+});
+
+test("runner-up emotions are shown next to the argmax label", async () => {
+  const app = loadApp({ fetch: async () => ({
+    ok: true,
+    json: async () => ({
+      posterior: { happy: 0.45, angry: 0.35, fearful: 0.15, calm: 0.05 },
+      most_likely: "happy",
+      confidence: 0.45,
+      intervals: {},
+    }),
+  }) });
+  await vm.runInContext("sendAudio(new Blob(['audio']))", app.context);
+  assert.equal(app.elements.emotionLabel.textContent, "happy");
+  assert.equal(
+    app.elements.emotionTop3.textContent,
+    "happy 45%  ·  angry 35%  ·  fearful 15%"
+  );
+  assert.doesNotMatch(app.elements.emotionTop3.className, /is-low-confidence/);
+});
+
+test("silent audio clears the runner-up row", async () => {
+  const app = loadApp({ fetch: async () => ({
+    ok: true,
+    json: async () => ({
+      posterior: { happy: 0.45, angry: 0.35, fearful: 0.15 },
+      most_likely: "unknown",
+      confidence: 0.0,
+      abstained: true,
+      silence_detected: true,
+      intervals: {},
+    }),
+  }) });
+  await vm.runInContext("sendAudio(new Blob(['audio']))", app.context);
+  assert.equal(app.elements.emotionTop3.textContent, "—");
 });
 
 test("recorded browser audio is uploaded as PCM WAV for the backend decoder", async () => {

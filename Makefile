@@ -5,7 +5,7 @@ PIP := .venv/bin/pip
 UVICORN := .venv/bin/uvicorn
 WORKERS ?= 4
 
-.PHONY: setup data-download data-prepare data-extract data-augment data-split data-ready data-augment-ready train-baselines train train-all train-augmented calibrate calibrate-augmented evaluate evaluate-augmented test-models augmentation-ablation serve lint test ci tracker-update ship clean
+.PHONY: setup data-download data-prepare data-extract data-augment data-split data-ready data-augment-ready train-baselines train train-all train-augmented calibrate calibrate-augmented evaluate evaluate-augmented test-models augmentation-ablation model-search-v2 model-search-dynamic-v2 tune-dynamic-v2 validate-dynamic-finalist-v2 serve lint test ci tracker-update ship clean
 
 setup:
 	python3 -m venv .venv
@@ -66,6 +66,22 @@ augmentation-ablation: data-ready data-augment data-augment-ready
 	$(MAKE) train-augmented
 	$(MAKE) calibrate-augmented
 	$(MAKE) evaluate-augmented
+
+# Compare predeclared model families using speaker-grouped folds from training data only.
+model-search-v2: data-ready
+	$(PYTHON) -m scripts.search_models
+
+model-search-dynamic-v2: data-ready
+	$(PYTHON) -m scripts.search_models --representation dynamic_v2 \
+		--output experiments/model_search_dynamic_v2/summary.json
+
+tune-dynamic-v2: data-ready
+	$(PYTHON) -m scripts.tune_dynamic_model
+
+validate-dynamic-finalist-v2: data-ready
+	$(PYTHON) -m scripts.tune_dynamic_model --folds 5 \
+		--candidate hgb_leaf7_agreement \
+		--output experiments/dynamic_finalist_v2/summary.json
 
 serve:
 	$(UVICORN) timbre.api.main:app --reload --port 8000

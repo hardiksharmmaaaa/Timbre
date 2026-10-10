@@ -84,12 +84,13 @@ def render_tracker(rows: list[list[str]]) -> str:
 def render_progress(completed: int, total: int, percentage: int, remaining_days: int) -> str:
     """Render the prominent progress summary below the tracker table."""
     working_weeks = (remaining_days + 4) // 5
+    week_label = "working week" if working_weeks == 1 else "working weeks"
     return (
         f"{PROGRESS_HEADING}\n\n"
         f"> **{percentage}% complete** — {completed} of {total} tracked delivery milestones.\n"
         ">\n"
         f"> **Estimated effort remaining: {remaining_days} developer-days "
-        f"(about {working_weeks} working weeks).** This excludes model-training runtime and "
+        f"(about {working_weeks} {week_label}).** This excludes model-training runtime and "
         "external approvals.\n"
     )
 

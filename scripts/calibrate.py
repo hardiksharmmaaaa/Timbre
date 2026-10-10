@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import warnings
 from pathlib import Path
 
 import joblib
 import numpy as np
+from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 from timbre.api.pipeline import PerceptionPipeline
 from timbre.data.cache import load_cached_clips, manifest_sha256
@@ -18,6 +22,27 @@ from timbre.utils.common import get_logger, set_seed
 from timbre.utils.config import settings
 
 log = get_logger("calibrate")
+
+
+def fit_score_calibrator(scores: np.ndarray, labels: np.ndarray) -> Pipeline:
+    """Fit a standardized score calibrator and reject unconverged artifacts."""
+    calibrator = Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            (
+                "classifier",
+                LogisticRegression(
+                    max_iter=2000,
+                    class_weight="balanced",
+                    random_state=settings.seed,
+                ),
+            ),
+        ]
+    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", ConvergenceWarning)
+        calibrator.fit(scores, labels)
+    return calibrator
 
 
 def select_abstention_threshold(
@@ -59,11 +84,7 @@ def calibrate_model(model_dir: Path) -> None:
     pipeline = PerceptionPipeline.load(model_dir)
     scores = score_feature_sequences(pipeline, [clip.features for clip in clips])
     labels = np.array([clip.label for clip in clips])
-    calibrator = LogisticRegression(
-        max_iter=2000,
-        class_weight="balanced",
-        random_state=settings.seed,
-    ).fit(scores, labels)
+    calibrator = fit_score_calibrator(scores, labels)
     probabilities = calibrator.predict_proba(scores)
     class_ids = [int(value) for value in calibrator.classes_]
     if class_ids != list(pipeline.state_ids):
@@ -75,7 +96,7 @@ def calibrate_model(model_dir: Path) -> None:
     selection = select_abstention_threshold(labels, probabilities, class_ids)
     metadata = {
         "schema_version": 1,
-        "method": "multinomial_logistic_score_calibration",
+        "method": "standardized_multinomial_logistic_score_calibration",
         "class_ids": class_ids,
         "validation_clip_count": len(clips),
         "manifest_sha256": digest,

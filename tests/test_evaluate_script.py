@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from scripts.calibrate import select_abstention_threshold
+from scripts.calibrate import fit_score_calibrator, select_abstention_threshold
 from scripts.evaluate import summarize_predictions
 
 
@@ -52,3 +52,22 @@ def test_evaluation_applies_validation_selected_abstention_threshold():
     assert selection["coverage"] >= 0.8
     assert metrics["coverage"] == pytest.approx(selection["coverage"])
     assert metrics["covered_accuracy"] == pytest.approx(selection["accuracy"])
+
+
+def test_score_calibrator_standardizes_differently_scaled_hmm_scores():
+    labels = np.tile(np.array([1, 3, 4]), 20)
+    scores = np.column_stack(
+        [
+            (labels == 1).astype(float) * 1e-3,
+            (labels == 3).astype(float) * 1e3,
+            (labels == 4).astype(float) * 1e6,
+        ]
+    )
+
+    calibrator = fit_score_calibrator(scores, labels)
+    probabilities = calibrator.predict_proba(scores)
+
+    assert list(calibrator.named_steps) == ["scaler", "classifier"]
+    assert calibrator.classes_.tolist() == [1, 3, 4]
+    assert np.isfinite(probabilities).all()
+    assert np.allclose(probabilities.sum(axis=1), 1.0)

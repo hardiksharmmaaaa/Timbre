@@ -1,6 +1,6 @@
 | Area | Trackable item | Status | Evidence or exit criterion | Next checkpoint |
 | --- | --- | --- | --- | --- |
-| Workflow | Next engineering task | Next | Baselines: Logistic regression and random forest | Run `make train-all` on the frozen six-class split |
+| Workflow | Next engineering task | Next | Evaluation: Training-only augmentation ablation | Run `make augmentation-ablation` after freezing primary results |
 | Workflow | Automatic ship refresh | Complete | `make ship` runs CI and refreshes this table before committing and pushing | Keep tracker updates in the guarded ship workflow |
 | UI | Frontend experience | Complete | Interface implemented; 14 frontend checks cover microphone lifecycle, WAV uploads, chat errors, stale responses, and graphics fallbacks | Verify real microphone capture and visual behavior in a connected browser |
 | Planning | Model and data plan | Complete | `docs/MODEL_AND_DATA_PLAN.md` documents architecture, datasets, training, and evaluation | Keep decisions and dates current |
@@ -23,16 +23,16 @@
 | Pipeline | Audio integrity screening | Complete | 10,898 candidates decoded and screened; six conflicting-label copies, one same-label duplicate, and one nearly silent clip were excluded with recorded reasons | Keep exclusions and thresholds with each experiment |
 | Pipeline | Speaker-disjoint splits | Complete | Frozen split has 5,848 train, 1,318 validation, 1,324 in-domain test, and 2,400 TESS external-test clips; development speakers are disjoint per dataset | Never tune against test or external-test splits |
 | Features | Cached extraction | Complete | All 10,890 accepted clips have finite hash-validated feature caches under the 16 kHz versioned feature contract; `make data-ready` passes | Rebuild only after a versioned contract change |
-| Baselines | Logistic regression and random forest | Pending | Manifest-driven training is implemented for scaled logistic regression and a class-balanced random forest; no fitted artifacts or results exist yet | Run `make train-all` on the frozen six-class split |
-| Model | Six-class PCA and HMM training | Pending | Manifest-driven pooled training and feature-contract metadata are implemented; the six-class models have not been fitted or evaluated | Run `make train-all` and preserve its artifacts |
+| Baselines | Logistic regression and random forest | Complete | Both baselines were fitted on 5,848 frozen training recordings; logistic regression reached 49.92% in-domain accuracy and random forest reached 32.54% on external TESS | Preserve artifacts and use the baselines when interpreting the HMM |
+| Model | Six-class PCA and HMM training | Complete | Training-only scaling/PCA used 1,580,436 frames and six three-state diagonal Gaussian HMMs were fitted and serialized with manifest and environment metadata | Treat the current model as the frozen primary experiment |
 | Model | Hand-written Viterbi validation | Pass | Brute-force equivalence, length normalization, and impossible start/transition regressions pass | Retain decoder validation during model changes |
-| Uncertainty | Probability calibration and abstention | Pending | Validation-only multinomial score calibration and minimum-coverage threshold selection are implemented; they remain unfitted until the HMM exists | Run calibration during `make train-all` and inspect ECE/Brier evidence |
-| Evaluation | In-domain and TESS evaluation | Pending | Frozen-split evaluation now reports classification, calibration, abstention, latency, clip, and speaker metrics for HMMs and baselines; it remains unrun | Run `make test-models` only after training is frozen |
+| Uncertainty | Probability calibration and abstention | Complete | Standardized multinomial calibration converged on 1,318 validation recordings; threshold 0.2358 retained 80.20% at 42.95% validation accuracy | Develop OOD-aware abstention without tuning on TESS |
+| Evaluation | In-domain and TESS evaluation | Complete | Frozen evaluation recorded 1,324 in-domain and 2,400 external clips; logistic regression won in-domain at 49.92% and random forest won TESS at 32.54% | Use validation-only changes for any versioned follow-up experiment |
 | Evaluation | Training-only augmentation ablation | Pending | Deterministic RIRS reverberation extraction and isolated train/calibrate/evaluate commands are implemented; the ablation remains unrun | Run `make augmentation-ablation` after freezing primary results |
 | Release gate | Repository validation | Pass | `make ci` and tracker validation passed on 2026-09-29 | Complete real browser/provider checks and dataset evaluation before a research release |
 
 ## Project Progress
 
-> **72% complete** — 13 of 18 tracked delivery milestones.
+> **94% complete** — 17 of 18 tracked delivery milestones.
 >
-> **Estimated effort remaining: 13 developer-days (about 3 working weeks).** This excludes model-training runtime and external approvals.
+> **Estimated effort remaining: 2 developer-days (about 1 working week).** This excludes model-training runtime and external approvals.

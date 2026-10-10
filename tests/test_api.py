@@ -81,6 +81,42 @@ def test_valid_audio_demo_contract(client):
     assert posterior.most_likely().name_lower == result["most_likely"]
 
 
+def test_silent_audio_abstains_without_calling_model(client, monkeypatch):
+    def infer(y, sr):  # pragma: no cover - must never be reached for silent input
+        raise AssertionError("silent audio must not reach the model")
+
+    monkeypatch.setattr(main, "_perception", SimpleNamespace(infer=infer, should_abstain=lambda p: False))
+    response = client.post(
+        "/api/inference", files={"file": ("test.wav", wav_bytes([0.0] * 16000, sr=16000))}
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert result["silence_detected"] is True
+    assert result["abstained"] is True
+    assert result["most_likely"] == "unknown"
+    assert result["confidence"] == 0.0
+    assert set(result["posterior"]) == set(result["intervals"])
+    assert all(value == 0.0 for value in result["posterior"].values())
+
+
+def test_sounding_audio_still_uses_model(client, monkeypatch):
+    calls = []
+
+    def infer(y, sr):
+        calls.append((y, sr))
+        return mock_posterior()
+
+    monkeypatch.setattr(main, "_perception", SimpleNamespace(infer=infer, should_abstain=lambda p: False))
+    response = client.post(
+        "/api/inference", files={"file": ("test.wav", wav_bytes([0.1] * 16000, sr=16000))}
+    )
+    assert response.status_code == 200
+    assert len(calls) == 1
+    result = response.json()
+    assert "silence_detected" not in result
+    assert result["most_likely"] == "calm"
+
+
 def test_health_loads_available_model(client, monkeypatch):
     from timbre.api.pipeline import PerceptionPipeline
 
@@ -89,6 +125,18 @@ def test_health_loads_available_model(client, monkeypatch):
     result = client.get("/api/health").json()
     assert result["model_loaded"] is True
     assert result["demo_mode"] is False
+
+
+def test_health_reports_served_model(client, monkeypatch):
+    from timbre.api.pipeline import PerceptionPipeline
+
+    (main.settings.model_dir / "meta.json").write_text("{}")
+    monkeypatch.setattr(
+        PerceptionPipeline, "load", lambda _: SimpleNamespace(mode="clip")
+    )
+    result = client.get("/api/health").json()
+    assert result["served_model"] == "clip"
+    assert result["model_loaded"] is True
 
 
 def test_session_route_serves_dedicated_room(client):
@@ -140,7 +188,8 @@ def test_inference_keeps_event_loop_responsive(client, monkeypatch):
             transport=httpx.ASGITransport(app=main.app), base_url="http://test"
         ) as session:
             request = asyncio.create_task(session.post(
-                "/api/inference", files={"file": ("test.wav", wav_bytes([0.0] * 100))}
+                # Loud enough to pass the silence gate so infer() must run.
+                "/api/inference", files={"file": ("test.wav", wav_bytes([0.1] * 100))}
             ))
             while not started.is_set():
                 await asyncio.sleep(0.001)

@@ -60,6 +60,27 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("INFERENCE_LATENCY_BUDGET_MS", "LATENCY_BUDGET_MS"),
     )
     reset_on_silence: bool = True
+    # Audio below this RMS level is treated as silence and abstained from.
+    # Mirrors the frontend's VAD threshold (VAD_THRESHOLD) for the same 0-1 scale.
+    silence_rms_threshold: float = Field(
+        default=0.005,
+        ge=0.0,
+        validation_alias=AliasChoices("SILENCE_RMS_THRESHOLD", "SILENCE_THRESHOLD"),
+    )
+    # Which trained model serves live inference: the per-emotion HMM ("hmm") or the
+    # clip-statistic logistic baseline ("clip"). The baseline scores better on the
+    # held-out in-domain set (49.9% accuracy vs 39.0%) and is the recommended default.
+    served_model: str = Field(
+        default="clip", validation_alias=AliasChoices("SERVED_MODEL", "SERVED_MODEL_NAME")
+    )
+    # Clip-classifier path abstains when the top probability falls below this value.
+    # Applies only when served_model == "clip" (the HMM uses calibration.json instead).
+    baseline_abstain_confidence: float = Field(
+        default=0.35,
+        ge=0.0,
+        le=1.0,
+        validation_alias=AliasChoices("BASELINE_ABSTAIN_CONFIDENCE", "ABSTAIN_CONFIDENCE"),
+    )
 
     # External services
     llm_provider: str = "openai"

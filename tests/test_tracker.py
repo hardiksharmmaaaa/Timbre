@@ -90,17 +90,18 @@ def test_repository_tracker_has_table_and_highlighted_progress_footer() -> None:
     rows = parse_tracker(tracker_path.read_text(encoding="utf-8"))
 
     assert find_row(rows, "Workflow", "Next engineering task")[3] == (
-        "Baselines: Logistic regression and random forest"
+        "Evaluation: Training-only augmentation ablation"
     )
     assert select_next_task(rows) == (
-        "Baselines",
-        "Logistic regression and random forest",
-        "Run `make train-all` on the frozen six-class split",
+        "Evaluation",
+        "Training-only augmentation ablation",
+        "Run `make augmentation-ablation` after freezing primary results",
     )
-    assert calculate_progress(rows) == (13, 18, 72, 13)
+    assert calculate_progress(rows) == (17, 18, 94, 2)
     tracker_text = tracker_path.read_text(encoding="utf-8")
-    assert "\n\n## Project Progress\n\n> **72% complete**" in tracker_text
-    assert "Estimated effort remaining: 13 developer-days" in tracker_text
+    assert "\n\n## Project Progress\n\n> **94% complete**" in tracker_text
+    assert "Estimated effort remaining: 2 developer-days" in tracker_text
+    assert "about 1 working week" in tracker_text
     assert "| Progress |" not in tracker_text
 
 

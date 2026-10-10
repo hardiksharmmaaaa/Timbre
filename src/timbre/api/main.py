@@ -29,7 +29,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 from starlette.concurrency import run_in_threadpool
 
-from timbre.core.types import EmotionPosterior, EmotionState
+from timbre.core.types import EMOTION_NAMES, EmotionPosterior, EmotionState
 from timbre.glue.companion import build_system_prompt, llm_reply
 from timbre.utils.config import settings
 
@@ -182,6 +182,7 @@ def health() -> dict:
         "service": "timbre",
         "version": app.version,
         "model_loaded": pipe is not None,
+        "served_model": getattr(pipe, "mode", None) if pipe is not None else None,
         "window_ms": settings.window_ms,
         "demo_mode": pipe is None,
     }
@@ -212,6 +213,21 @@ def _infer_audio(raw: bytes) -> dict:
     pipe = _load_perception()
     if pipe is None:
         return _mock_inference()
+
+    # Silence detection: check RMS energy (only when model is loaded)
+    rms = float(np.sqrt(np.mean(y ** 2)))
+    if rms < settings.silence_rms_threshold:
+        names = list(EMOTION_NAMES.values())
+        # Return early with abstained result for silence
+        return {
+            "posterior": {e: 0.0 for e in names},
+            "intervals": {e: 0.0 for e in names},
+            "most_likely": "unknown",
+            "confidence": 0.0,
+            "abstained": True,
+            "silence_detected": True,
+        }
+
     posterior = pipe.infer(y, sr)
     abstained = pipe.should_abstain(posterior) if hasattr(pipe, "should_abstain") else False
 

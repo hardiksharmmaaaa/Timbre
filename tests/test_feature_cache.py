@@ -7,7 +7,12 @@ import pytest
 
 from timbre.data.cache import load_cached_clips
 from timbre.data.manifest import MANIFEST_FIELDS
-from timbre.features.aggregation import aggregate_sequence, aggregate_sequences
+from timbre.features.aggregation import (
+    aggregate_sequence,
+    aggregate_sequence_v2,
+    aggregate_sequences,
+    aggregate_sequences_v2,
+)
 
 
 def _manifest_row() -> dict:
@@ -69,3 +74,21 @@ def test_aggregation_has_seven_statistics_per_feature():
 
     assert aggregate_sequence(first).shape == (21,)
     assert aggregate_sequences([first, second]).shape == (2, 21)
+
+
+def test_dynamic_aggregation_has_a_fixed_finite_contract():
+    first = np.arange(30, dtype=float).reshape(10, 3)
+    one_frame = np.array([[1.0, 2.0, 3.0]])
+
+    # 3 distributions * 7 statistics * 3 columns, 3 slopes,
+    # 4 temporal segments * (mean + std) * 3 columns, and duration.
+    expected_width = 3 * 7 * 3 + 3 + 4 * 2 * 3 + 1
+    assert aggregate_sequence_v2(first).shape == (expected_width,)
+    matrix = aggregate_sequences_v2([first, one_frame])
+    assert matrix.shape == (2, expected_width)
+    assert np.isfinite(matrix).all()
+
+
+def test_dynamic_aggregation_rejects_invalid_segment_count():
+    with pytest.raises(ValueError, match="segment_count"):
+        aggregate_sequence_v2(np.ones((3, 2)), segment_count=1)
