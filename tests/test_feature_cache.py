@@ -5,14 +5,14 @@ import csv
 import numpy as np
 import pytest
 
-from timbre.data.cache import load_cached_clips
-from timbre.data.manifest import MANIFEST_FIELDS
-from timbre.features.aggregation import (
+from ml.core.features.aggregation import (
     aggregate_sequence,
     aggregate_sequence_v2,
     aggregate_sequences,
     aggregate_sequences_v2,
 )
+from ml.data.cache import load_cached_clips
+from ml.data.manifest import MANIFEST_FIELDS
 
 
 def _manifest_row() -> dict:

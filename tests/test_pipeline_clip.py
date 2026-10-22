@@ -11,16 +11,14 @@ import json
 
 import joblib
 import numpy as np
-import pytest
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from timbre.api import pipeline as pipeline_mod
-from timbre.api.pipeline import PerceptionPipeline
-from timbre.core.types import EmotionState
-from timbre.features.extractor import feature_contract
-
+from ml.config import EmotionState
+from ml.core.features.extractor import feature_contract
+from ml.core.pipeline import PerceptionPipeline
+from ml.core.pipeline import pipeline as pipeline_mod
 
 CLIP_WIDTH = 161  # 7 summary statistics x 23 frame features
 

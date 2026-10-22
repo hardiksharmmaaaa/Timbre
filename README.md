@@ -13,7 +13,8 @@ voice → [1. features] → [2. PCA/LLE] → [3. HMM/Viterbi] → [4. Bayesian u
 Boxes **1–4 are the student's own ML contribution** (graded). Boxes **5–7 are off-the-shelf
 glue** (LLM/TTS APIs), used transparently and never claimed as own work. See
 [`docs/AGENTS.md`](docs/AGENTS.md) (design intent) and
-[`docs/DESIGN.md`](docs/DESIGN.md) (engineering spec).
+[`docs/DESIGN.md`](docs/DESIGN.md) (engineering spec). See
+[`docs/REPOSITORY_MAP.md`](docs/REPOSITORY_MAP.md) for the one-page source-code map.
 
 ## Setup
 
@@ -63,9 +64,10 @@ and trained models and is validated before artifacts are reused or served.
 ## Project layout
 
 ```
-src/timbre/    Python package (features, reduction, hmm, bayesian, glue, api, eval)
+ml/            ML package (data, features, reduction, HMM, Bayesian, training, eval)
+src/timbre/    Application package (FastAPI, frontend serving, LLM/TTS glue)
 frontend/      static HTML/JS mic + mood-graph app
-scripts/       CLI entrypoints (download, extract, split, train, evaluate)
+scripts/       non-ML engineering utilities (tracker and release workflow)
 tests/         pytest suite
 data/          raw / processed features / splits (gitignored)
 models/        trained artifacts (gitignored)

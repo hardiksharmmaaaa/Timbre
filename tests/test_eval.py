@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from timbre.eval.metrics import (
+from ml.eval.metrics import (
     accuracy,
     balanced_accuracy,
     confusion_matrix,

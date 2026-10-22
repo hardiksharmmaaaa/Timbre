@@ -2,8 +2,8 @@
 
 import numpy as np
 
-from scripts.search_models import build_representation, candidate_models, speaker_disjoint_folds
-from timbre.data.cache import CachedClip
+from ml.data.cache import CachedClip
+from ml.training.search_models import build_representation, candidate_models, speaker_disjoint_folds
 
 
 def test_candidate_search_includes_linear_tree_kernel_and_boosting_models():

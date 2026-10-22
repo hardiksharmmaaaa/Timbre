@@ -5,9 +5,8 @@ from types import SimpleNamespace
 
 import openai
 
-from timbre.core.types import EmotionPosterior, EmotionState
+from ml.config import EmotionPosterior, EmotionState, settings
 from timbre.glue import companion
-from timbre.utils.config import settings
 
 
 class FakeResponses:

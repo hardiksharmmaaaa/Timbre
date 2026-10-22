@@ -29,9 +29,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 from starlette.concurrency import run_in_threadpool
 
-from timbre.core.types import EMOTION_NAMES, EmotionPosterior, EmotionState
+from ml.config import EMOTION_NAMES, EmotionPosterior, EmotionState, settings
 from timbre.glue.companion import build_system_prompt, llm_reply
-from timbre.utils.config import settings
 
 app = FastAPI(title="Timbre", version="0.1.0")
 
@@ -141,7 +140,7 @@ def _load_perception():
         meta = settings.model_dir / "meta.json"
         if not meta.exists():
             return None
-        from timbre.api.pipeline import PerceptionPipeline
+        from ml.core.pipeline import PerceptionPipeline
 
         try:
             _perception = PerceptionPipeline.load(settings.model_dir)

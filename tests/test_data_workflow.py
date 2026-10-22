@@ -5,8 +5,9 @@ import zipfile
 
 import pytest
 
-from scripts import download_data, extract_features
-from timbre.core.types import EmotionState
+from ml.config import EmotionState
+from ml.data import download as download_data
+from ml.training import extract_features
 
 
 def test_discovery_accepts_actor_directories_and_skips_unrelated_files(tmp_path):

@@ -13,41 +13,41 @@ setup:
 	$(PIP) install -e ".[dev]"
 
 data-download:
-	$(PYTHON) -m scripts.download_data
+	$(PYTHON) -m ml.data.download
 
 data-prepare:
-	$(PYTHON) -m scripts.prepare_data --workers $(WORKERS)
+	$(PYTHON) -m ml.data.prepare --workers $(WORKERS)
 
 data-extract:
-	$(PYTHON) -m scripts.extract_features --workers $(WORKERS)
+	$(PYTHON) -m ml.training.extract_features --workers $(WORKERS)
 
 data-augment:
-	$(PYTHON) -m scripts.extract_augmented_features --workers $(WORKERS)
+	$(PYTHON) -m ml.training.extract_augmented --workers $(WORKERS)
 
 # Compatibility alias; canonical preparation now freezes splits before extraction.
 data-split:
-	$(PYTHON) -m scripts.prepare_data --workers $(WORKERS)
+	$(PYTHON) -m ml.data.prepare --workers $(WORKERS)
 
 data-ready:
-	$(PYTHON) -m scripts.verify_data
+	$(PYTHON) -m ml.data.verify
 
 data-augment-ready:
-	$(PYTHON) -m scripts.verify_data --augmented
+	$(PYTHON) -m ml.data.verify --augmented
 
 train-baselines:
-	$(PYTHON) -m scripts.train_baselines
+	$(PYTHON) -m ml.training.train_baselines
 
 train:
-	$(PYTHON) -m scripts.train
+	$(PYTHON) -m ml.training.train
 
 train-augmented:
-	$(PYTHON) -m scripts.train --include-augmented --model-dir models/augmented
+	$(PYTHON) -m ml.training.train --include-augmented --model-dir models/augmented
 
 calibrate:
-	$(PYTHON) -m scripts.calibrate
+	$(PYTHON) -m ml.training.calibrate
 
 calibrate-augmented:
-	$(PYTHON) -m scripts.calibrate --model-dir models/augmented
+	$(PYTHON) -m ml.training.calibrate --model-dir models/augmented
 
 train-all: data-ready
 	$(MAKE) train-baselines
@@ -55,10 +55,10 @@ train-all: data-ready
 	$(MAKE) calibrate
 
 evaluate:
-	$(PYTHON) -m scripts.evaluate
+	$(PYTHON) -m ml.training.evaluate
 
 evaluate-augmented:
-	$(PYTHON) -m scripts.evaluate --model-dir models/augmented --run-name six_class_v1_augmented
+	$(PYTHON) -m ml.training.evaluate --model-dir models/augmented --run-name six_class_v1_augmented
 
 test-models: evaluate
 
@@ -69,17 +69,17 @@ augmentation-ablation: data-ready data-augment data-augment-ready
 
 # Compare predeclared model families using speaker-grouped folds from training data only.
 model-search-v2: data-ready
-	$(PYTHON) -m scripts.search_models
+	$(PYTHON) -m ml.training.search_models
 
 model-search-dynamic-v2: data-ready
-	$(PYTHON) -m scripts.search_models --representation dynamic_v2 \
+	$(PYTHON) -m ml.training.search_models --representation dynamic_v2 \
 		--output experiments/model_search_dynamic_v2/summary.json
 
 tune-dynamic-v2: data-ready
-	$(PYTHON) -m scripts.tune_dynamic_model
+	$(PYTHON) -m ml.training.tune_dynamic_model
 
 validate-dynamic-finalist-v2: data-ready
-	$(PYTHON) -m scripts.tune_dynamic_model --folds 5 \
+	$(PYTHON) -m ml.training.tune_dynamic_model --folds 5 \
 		--candidate hgb_leaf7_agreement \
 		--output experiments/dynamic_finalist_v2/summary.json
 
@@ -87,7 +87,7 @@ serve:
 	$(UVICORN) timbre.api.main:app --reload --port 8000
 
 lint:
-	$(PYTHON) -m ruff check src scripts tests
+	$(PYTHON) -m ruff check src ml scripts tests
 
 test:
 	$(PYTHON) -m pytest

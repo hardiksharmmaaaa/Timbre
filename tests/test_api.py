@@ -11,9 +11,10 @@ import pytest
 import soundfile as sf
 from fastapi.testclient import TestClient
 
+from ml.config import EmotionPosterior, EmotionState
+from ml.core.pipeline import pipeline as pipeline_mod
 from timbre.api import main
 from timbre.api.main import posterior_from_payload
-from timbre.core.types import EmotionPosterior, EmotionState
 
 
 @pytest.fixture
@@ -85,7 +86,9 @@ def test_silent_audio_abstains_without_calling_model(client, monkeypatch):
     def infer(y, sr):  # pragma: no cover - must never be reached for silent input
         raise AssertionError("silent audio must not reach the model")
 
-    monkeypatch.setattr(main, "_perception", SimpleNamespace(infer=infer, should_abstain=lambda p: False))
+    monkeypatch.setattr(
+        main, "_perception", SimpleNamespace(infer=infer, should_abstain=lambda p: False)
+    )
     response = client.post(
         "/api/inference", files={"file": ("test.wav", wav_bytes([0.0] * 16000, sr=16000))}
     )
@@ -106,7 +109,9 @@ def test_sounding_audio_still_uses_model(client, monkeypatch):
         calls.append((y, sr))
         return mock_posterior()
 
-    monkeypatch.setattr(main, "_perception", SimpleNamespace(infer=infer, should_abstain=lambda p: False))
+    monkeypatch.setattr(
+        main, "_perception", SimpleNamespace(infer=infer, should_abstain=lambda p: False)
+    )
     response = client.post(
         "/api/inference", files={"file": ("test.wav", wav_bytes([0.1] * 16000, sr=16000))}
     )
@@ -118,7 +123,7 @@ def test_sounding_audio_still_uses_model(client, monkeypatch):
 
 
 def test_health_loads_available_model(client, monkeypatch):
-    from timbre.api.pipeline import PerceptionPipeline
+    from ml.core.pipeline import PerceptionPipeline
 
     (main.settings.model_dir / "meta.json").write_text("{}")
     monkeypatch.setattr(PerceptionPipeline, "load", lambda _: SimpleNamespace())
@@ -128,7 +133,7 @@ def test_health_loads_available_model(client, monkeypatch):
 
 
 def test_health_reports_served_model(client, monkeypatch):
-    from timbre.api.pipeline import PerceptionPipeline
+    from ml.core.pipeline import PerceptionPipeline
 
     (main.settings.model_dir / "meta.json").write_text("{}")
     monkeypatch.setattr(
@@ -206,9 +211,8 @@ def test_trained_pipeline_inference_returns_posterior(client, monkeypatch, sourc
     from hmmlearn.hmm import GaussianHMM
     from sklearn.preprocessing import StandardScaler
 
-    from timbre.api import pipeline
-    from timbre.api.pipeline import PerceptionPipeline
-    from timbre.features.extractor import extract_frame_features
+    from ml.core.features.extractor import extract_frame_features
+    from ml.core.pipeline import PerceptionPipeline
 
     samples = 0.2 * np.sin(2 * np.pi * 220 * np.arange(4410) / 22050)
     features = extract_frame_features(samples, 22050)
@@ -225,7 +229,7 @@ def test_trained_pipeline_inference_returns_posterior(client, monkeypatch, sourc
         feature_sample_rates.append(sr)
         return extract_frame_features(y, sr)
 
-    monkeypatch.setattr(pipeline, "extract_frame_features", capture_features)
+    monkeypatch.setattr(pipeline_mod, "extract_frame_features", capture_features)
     samples = 0.2 * np.sin(2 * np.pi * 220 * np.arange(source_sr // 5) / source_sr)
 
     response = client.post(

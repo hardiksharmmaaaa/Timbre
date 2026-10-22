@@ -58,7 +58,7 @@ Random forest                  |
 
 ## Depth A: core ML files to understand deeply
 
-### 1. `src/timbre/features/extractor.py`
+### 1. `ml/core/features/extractor.py`
 
 **Purpose:** Converts a mono waveform into a time sequence of acoustic feature vectors.
 
@@ -81,7 +81,7 @@ operations.
 Our contribution: the feature contract, selected feature combination, alignment rules, voiced
 gate, validation, and integration into a sequence-classification pipeline.
 
-### 2. `src/timbre/features/aggregation.py`
+### 2. `ml/core/features/aggregation.py`
 
 **Purpose:** Converts a variable-length frame sequence into one fixed-width vector for the
 non-temporal baseline models.
@@ -94,7 +94,7 @@ Understand:
 - What temporal information is lost by aggregation.
 - Why this makes the baselines a useful comparison against the sequence-aware HMM.
 
-### 3. `src/timbre/reduction/reducer.py`
+### 3. `ml/core/reduction/reducer.py`
 
 **Purpose:** Standardizes frame features and reduces dimensionality before HMM training.
 
@@ -109,7 +109,7 @@ Understand:
 Library-backed parts: scikit-learn `StandardScaler`, `PCA`, `LocallyLinearEmbedding`, and
 `Pipeline`.
 
-### 4. `src/timbre/hmm/decoder.py`
+### 4. `ml/core/hmm/decoder.py`
 
 **Purpose:** Trains the Gaussian HMMs and scores observation sequences with Viterbi.
 
@@ -133,7 +133,7 @@ Library-backed part: `hmmlearn.GaussianHMM.fit()` estimates HMM parameters using
 
 Hand-written part: `viterbi_decode()` and the length-normalized Viterbi scoring path.
 
-### 5. `scripts/train.py`
+### 5. `ml/training/train.py`
 
 **Purpose:** Executes the main six-class PCA + per-emotion HMM training experiment.
 
@@ -149,7 +149,7 @@ Understand:
 - Why the manifest hash, feature contract, seed, Git commit, package versions, and training
   counts are stored with the artifacts.
 
-### 6. `scripts/train_baselines.py`
+### 6. `ml/training/train_baselines.py`
 
 **Purpose:** Trains logistic-regression and random-forest baselines.
 
@@ -164,7 +164,7 @@ Understand:
 
 Library-backed parts: scikit-learn logistic regression, random forest, scaling, and pipeline.
 
-### 7. `src/timbre/eval/scoring.py`
+### 7. `ml/eval/scoring.py`
 
 **Purpose:** Provides one consistent HMM class-scoring rule for calibration and evaluation.
 
@@ -176,7 +176,7 @@ Understand:
 - Numerically stable softmax using subtraction of the row maximum.
 - Why training, calibration, evaluation, and live inference must use the same scoring contract.
 
-### 8. `scripts/calibrate.py`
+### 8. `ml/training/calibrate.py`
 
 **Purpose:** Converts raw HMM class scores into better probability estimates and selects an
 abstention threshold.
@@ -193,7 +193,7 @@ Understand:
 
 Library-backed part: scikit-learn multinomial logistic regression.
 
-### 9. `src/timbre/bayesian/posterior.py`
+### 9. `ml/core/bayesian/posterior.py`
 
 **Purpose:** Supplies fallback probability and uncertainty surrogates when a fitted calibrator is
 not available.
@@ -210,7 +210,7 @@ Understand:
 Research-integrity point: fitted validation calibration is stronger evidence than the fallback
 surrogate intervals.
 
-### 10. `src/timbre/eval/metrics.py`
+### 10. `ml/eval/metrics.py`
 
 **Purpose:** Implements the principal evaluation and calibration metrics.
 
@@ -223,7 +223,7 @@ Understand:
 - Multiclass Brier score.
 - Writing versioned experiment results under `experiments/`.
 
-### 11. `scripts/evaluate.py`
+### 11. `ml/training/evaluate.py`
 
 **Purpose:** Evaluates the HMM and available baselines on frozen test partitions.
 
@@ -254,7 +254,7 @@ Understand:
 
 ## Depth B: ML data and experiment files
 
-### 13. `src/timbre/data/manifest.py`
+### 13. `ml/data/manifest.py`
 
 **Purpose:** Defines the canonical six-class dataset and frozen split contract.
 
@@ -274,7 +274,7 @@ Understand the design and important functions:
 You do not need to memorize every CSV-writing line, but you must be able to explain how this
 file prevents label inconsistency and speaker leakage.
 
-### 14. `src/timbre/data/cache.py`
+### 14. `ml/data/cache.py`
 
 **Purpose:** Loads cached features only when they match the manifest.
 
@@ -288,7 +288,7 @@ Understand:
 - Why cached extraction improves reproducibility and avoids recomputing audio features during
   every training run.
 
-### 15. `src/timbre/features/augmentation.py`
+### 15. `ml/core/features/augmentation.py`
 
 **Purpose:** Applies deterministic, label-preserving room reverberation to training audio.
 
@@ -302,14 +302,14 @@ Understand:
 
 Library-backed part: SciPy FFT convolution.
 
-### 16. `scripts/prepare_data.py`
+### 16. `ml/data/prepare.py`
 
 **Purpose:** Command-line entry point for canonical manifest generation and frozen splits.
 
 Understand how it calls `prepare_manifest()` and why data preparation happens before feature
 extraction.
 
-### 17. `scripts/extract_features.py`
+### 17. `ml/training/extract_features.py`
 
 **Purpose:** Extracts and caches features for every accepted manifest clip.
 
@@ -322,7 +322,7 @@ Understand:
 - Parallel extraction.
 - Why labels and split names are stored with each cache.
 
-### 18. `scripts/extract_augmented_features.py`
+### 18. `ml/training/extract_augmented.py`
 
 **Purpose:** Creates a separate feature cache for reverberated training clips.
 
@@ -333,20 +333,20 @@ Understand:
 - Keeping augmentation metadata and hashes.
 - Never replacing original features or augmenting validation/test data.
 
-### 19. `scripts/verify_data.py`
+### 19. `ml/data/verify.py`
 
 **Purpose:** Fails unless the manifest, frozen split document, and feature caches agree.
 
 Understand the manifest-hash check, required nonempty splits, full cache coverage, and optional
 augmentation verification.
 
-### 20. `src/timbre/core/types.py`
+### 20. `ml/config/types.py`
 
 **Purpose:** Defines the shared emotion labels and ML input/output data structures.
 
 Understand `EmotionState`, `Clip`, `EmotionPosterior`, `most_likely()`, and `confidence`.
 
-### 21. `src/timbre/utils/config.py`
+### 21. `ml/config/config.py`
 
 **Purpose:** Centralizes experiment and serving hyperparameters.
 
@@ -359,13 +359,13 @@ Understand:
 - F0/Nyquist validation.
 - Why training and serving must share these settings.
 
-### 22. `src/timbre/utils/common.py`
+### 22. `ml/config/common.py`
 
 **Purpose:** Provides deterministic seeding, logging, and RAVDESS filename parsing.
 
 Understand how RAVDESS filename fields encode labels and speakers and why the seed matters.
 
-### 23. `src/timbre/utils/repro.py`
+### 23. `ml/config/repro.py`
 
 **Purpose:** Records the Git commit, Python/platform information, and ML-library versions in
 model metadata.
@@ -374,18 +374,18 @@ Understand why reproducibility metadata is part of an ML experiment.
 
 ## Depth C: know the boundary and purpose
 
-### 24. `scripts/download_data.py`
+### 24. `ml/data/download.py`
 
 Downloads and verifies dataset ZIP files. This is data acquisition, not an ML algorithm. Know
 which datasets enter the experiment and their roles; you do not need to memorize the HTTP and
 ZIP handling.
 
-### 25. `scripts/make_splits.py`
+### 25. `ml/training/make_splits.py`
 
 This is the older RAVDESS-only split helper. Study `split_by_actor()` as a simple example of
 speaker-independent splitting, but do not present this as the current canonical workflow.
-The current `make data-split` target is a compatibility alias for `scripts.prepare_data`, and
-the pooled split logic lives in `src/timbre/data/manifest.py`.
+The current `make data-split` target is a compatibility alias for `ml.data.prepare`, and
+the pooled split logic lives in `ml/data/manifest.py`.
 
 ### 26. `src/timbre/api/main.py`
 
@@ -494,17 +494,17 @@ Read the code in this order:
 
 1. `README.md` — overall goal and system stages.
 2. `docs/MODEL_AND_DATA_PLAN.md` — research question and experiment design.
-3. `src/timbre/core/types.py` and `src/timbre/utils/config.py` — labels and parameters.
-4. `src/timbre/data/manifest.py` — data sources, canonical labels, and splits.
-5. `src/timbre/data/cache.py` — trusted feature loading.
-6. `src/timbre/features/extractor.py` — audio-to-feature conversion.
-7. `src/timbre/features/aggregation.py` and `scripts/train_baselines.py` — baselines.
-8. `src/timbre/reduction/reducer.py` — scaling and PCA.
-9. `src/timbre/hmm/decoder.py` — HMM training and Viterbi.
-10. `scripts/train.py` — complete training orchestration.
-11. `src/timbre/eval/scoring.py` and `scripts/calibrate.py` — scores and probabilities.
-12. `src/timbre/bayesian/posterior.py` — fallback uncertainty surrogates.
-13. `src/timbre/eval/metrics.py` and `scripts/evaluate.py` — measured results.
+3. `ml/config/types.py` and `ml/config/config.py` — labels and parameters.
+4. `ml/data/manifest.py` — data sources, canonical labels, and splits.
+5. `ml/data/cache.py` — trusted feature loading.
+6. `ml/core/features/extractor.py` — audio-to-feature conversion.
+7. `ml/core/features/aggregation.py` and `ml/training/train_baselines.py` — baselines.
+8. `ml/core/reduction/reducer.py` — scaling and PCA.
+9. `ml/core/hmm/decoder.py` — HMM training and Viterbi.
+10. `ml/training/train.py` — complete training orchestration.
+11. `ml/eval/scoring.py` and `ml/training/calibrate.py` — scores and probabilities.
+12. `ml/core/bayesian/posterior.py` — fallback uncertainty surrogates.
+13. `ml/eval/metrics.py` and `ml/training/evaluate.py` — measured results.
 14. `src/timbre/api/pipeline.py` — live inference.
 15. `src/timbre/api/main.py` — application boundary only.
 

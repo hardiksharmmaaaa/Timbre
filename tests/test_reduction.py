@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from timbre.reduction.reducer import fit_reduction, reduce_sequences
+from ml.core.reduction.reducer import fit_reduction, reduce_sequences
 
 
 def test_pca_reduces_dimensionality():

@@ -9,8 +9,8 @@ import numpy as np
 import pytest
 import soundfile as sf
 
-from timbre.core.types import EmotionState
-from timbre.data.manifest import (
+from ml.config import EmotionState
+from ml.data.manifest import (
     ManifestRecord,
     parse_crema_clip,
     parse_ravdess_clip,

@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 
-from scripts.calibrate import fit_score_calibrator, select_abstention_threshold
-from scripts.evaluate import summarize_predictions
+from ml.training.calibrate import fit_score_calibrator, select_abstention_threshold
+from ml.training.evaluate import summarize_predictions
 
 
 def test_evaluation_reports_declared_metrics_and_stable_class_order():

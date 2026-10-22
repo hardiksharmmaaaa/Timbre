@@ -39,20 +39,20 @@ transfer = [
 ]
 
 [project.scripts]
-timbre-download = "scripts.download_data:main"
-timbre-prepare = "scripts.prepare_data:main"
-timbre-extract = "scripts.extract_features:main"
-timbre-extract-augmented = "scripts.extract_augmented_features:main"
-timbre-split = "scripts.prepare_data:main"
-timbre-verify-data = "scripts.verify_data:main"
-timbre-train-baselines = "scripts.train_baselines:main"
-timbre-train = "scripts.train:main"
-timbre-calibrate = "scripts.calibrate:main"
-timbre-evaluate = "scripts.evaluate:main"
+timbre-download = "ml.data.download:main"
+timbre-prepare = "ml.data.prepare:main"
+timbre-extract = "ml.training.extract_features:main"
+timbre-extract-augmented = "ml.training.extract_augmented:main"
+timbre-split = "ml.data.prepare:main"
+timbre-verify-data = "ml.data.verify:main"
+timbre-train-baselines = "ml.training.train_baselines:main"
+timbre-train = "ml.training.train:main"
+timbre-calibrate = "ml.training.calibrate:main"
+timbre-evaluate = "ml.training.evaluate:main"
 
 [tool.setuptools.packages.find]
 where = ["src", "."]
-include = ["timbre*", "scripts*"]
+include = ["timbre*", "scripts*", "ml*"]
 namespaces = false
 
 [tool.setuptools.package-data]

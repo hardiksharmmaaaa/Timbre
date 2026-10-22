@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 
-from timbre.bayesian.posterior import posterior_from_log_likelihoods
-from timbre.core.types import EmotionState
+from ml.config import EmotionState
+from ml.core.bayesian.posterior import posterior_from_log_likelihoods
 
 STATES = [EmotionState.CALM, EmotionState.HAPPY, EmotionState.SAD]
 

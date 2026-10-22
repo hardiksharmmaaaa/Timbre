@@ -5,13 +5,13 @@ import csv
 import numpy as np
 import pytest
 
-from scripts.tune_dynamic_model import (
+from ml.data.cache import CachedClip
+from ml.data.manifest import MANIFEST_FIELDS
+from ml.training.tune_dynamic_model import (
     build_sample_weights,
     select_candidates,
     tuning_candidates,
 )
-from timbre.data.cache import CachedClip
-from timbre.data.manifest import MANIFEST_FIELDS
 
 
 def _clip(clip_id: str, dataset: str) -> CachedClip:
