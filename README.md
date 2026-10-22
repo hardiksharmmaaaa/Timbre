@@ -40,6 +40,15 @@ Speaker-disjoint partitions are created independently inside each development da
 locked to `external_test` and cannot enter training or validation through these commands. See
 [`docs/TRAINING_RUNBOOK.md`](docs/TRAINING_RUNBOOK.md) for the exact staged workflow.
 
+Baselines include logistic regression, random forest, KNN, AdaBoost, and SVM. KNN, AdaBoost, and SVM
+hyperparameters are selected by five-fold speaker-disjoint cross-validation on training data.
+KNN/SVM scaling is fitted inside each fold; AdaBoost tree learners use unscaled clip statistics.
+The saved winners are evaluated on both test splits. Search reports are stored in
+`models/baselines/knn_cv.json` and `models/baselines/adaboost_cv.json`. AdaBoost searches tree
+depth, estimator count, and learning rate. SVM searches 30 linear/RBF configurations across
+regularization, kernel width, and class weighting; its report is `models/baselines/svm_cv.json`.
+SVM evaluation uses class predictions; probability calibration metrics are unavailable.
+
 The chat integration uses OpenAI first through the official `openai` SDK. Set
 `OPENAI_API_KEY` in `.env`. Gemini can be configured later with `GEMINI_API_KEY` as an
 automatic backup; leave it blank for OpenAI-only operation. With neither key, the app stays

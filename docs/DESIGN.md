@@ -143,8 +143,40 @@ Hand-written scoring + visualizations, all deterministic:
 - **Calibration curve**: bin predicted confidence vs. actual correctness; report expected
   calibration error (ECE). This is the "does 72% ≈ 72%?" test.
 - **Ablations**: PCA vs. LLE; ±Bayesian layer; ±Kalman smoothing; HMM vs. logistic-regression
-  vs. random-forest baselines.
+  vs. random-forest vs. KNN vs. AdaBoost vs. SVM baselines.
 - Script: `ml/training/evaluate.py` → writes figures + metrics into `experiments/<run>/`.
+
+### 6.1 KNN baseline selection
+
+`baselines.py` wraps scikit-learn KNN and grid search on the same 161 clip-summary features
+used by the other baselines. Five seeded, stratified, speaker-grouped folds use only training
+clips. Scaling is fitted inside each fold's pipeline. The grid varies neighbor count
+(1, 3, 5, 7, 11, 15, 21, 31), uniform/distance weighting, and Manhattan/Euclidean distance.
+Select the highest mean CV accuracy, refit on all training clips, and persist `knn.joblib`
+and the complete `knn_cv.json` search report under `models/baselines/`. `make train-all`
+includes this search through `train-baselines`; `make test-models` evaluates the saved winner
+on both frozen test splits. Test and TESS accuracy never influence selection.
+
+### 6.2 AdaBoost baseline selection
+
+AdaBoost uses scikit-learn multiclass SAMME with seeded decision-tree weak learners on the
+unscaled 161 clip statistics. It shares KNN's five training-only speaker-disjoint CV folds.
+Search 12 configurations: 50/100 estimators, learning rate 0.1/0.5/1.0, and tree depth 1/2.
+Select the highest mean CV accuracy and refit on all training clips. Save `adaboost.joblib`
+and `adaboost_cv.json` under `models/baselines/`, including all candidate scores and provenance.
+`train-all` includes this through `train-baselines`; `test-models` reports the saved AdaBoost
+on both held-out splits without further selection or fitting.
+
+### 6.3 SVM baseline selection
+
+SVM wraps scikit-learn `SVC` in a `StandardScaler` pipeline. Search 30 configurations:
+linear kernel with C 0.1/1/10, or RBF with C 0.1/1/10/100 and gamma scale/0.001/0.01;
+both use class weights None/balanced. The same five speaker-disjoint training folds select
+the highest mean CV accuracy; scaling is fitted separately inside each fold. Refit on all
+training clips and save `svm.joblib`, `svm_cv.json`, and selection metadata alongside the
+other baselines. Training and evaluation include the saved winner automatically.
+Evaluation uses SVC class predictions, matching CV scoring. Probability estimation is disabled;
+ECE, Brier score, and confidence-based abstention threshold are explicitly unavailable.
 
 ## 7. Backend & inference (`api/` + `glue/`)
 
@@ -193,6 +225,8 @@ data-download # ml/data/download.py
 data-extract  # ml/training/extract_features.py
 data-split    # ml/training/make_splits.py
 train         # ml/training/train.py            -> models/
+train-baselines # ml/training/train_baselines.py -> models/baselines/ (KNN + AdaBoost + SVM CV)
+train-all     # readiness -> baselines -> HMM -> validation calibration
 evaluate      # ml/training/evaluate.py          -> experiments/<run>/
 serve         # uvicorn timbre.api.main:app  (serves frontend too)
 lint          # ruff check .

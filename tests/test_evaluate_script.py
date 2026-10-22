@@ -71,3 +71,28 @@ def test_score_calibrator_standardizes_differently_scaled_hmm_scores():
     assert calibrator.classes_.tolist() == [1, 3, 4]
     assert np.isfinite(probabilities).all()
     assert np.allclose(probabilities.sum(axis=1), 1.0)
+
+
+def test_evaluation_uses_explicit_class_predictions_and_their_confidence():
+    metrics = summarize_predictions(
+        np.array([1, 7]), np.array([[0.2, 0.8], [0.3, 0.7]]), [1, 7], 0.5,
+        predicted=np.array([1, 7]),
+    )
+    assert metrics["accuracy"] == 1.0
+    assert metrics["confusion_matrix"] == [[1, 0], [0, 1]]
+    assert metrics["coverage"] == 0.5
+    assert metrics["ece"] == pytest.approx(0.55)
+
+
+def test_evaluation_without_probabilities_does_not_invent_confidence():
+    metrics = summarize_predictions(
+        np.array([1, 7]), None, [1, 7], predicted=np.array([1, 1]),
+    )
+    assert metrics["accuracy"] == metrics["covered_accuracy"] == 0.5
+    assert metrics["confusion_matrix"] == [[1, 0], [1, 0]]
+    assert metrics["ece"] is metrics["brier"] is metrics["abstention_threshold"] is None
+    assert metrics["coverage"] == 1.0
+    with pytest.raises(ValueError, match="predictions or probabilities"):
+        summarize_predictions(np.array([1]), None, [1, 7])
+    with pytest.raises(ValueError, match="confidence-based abstention"):
+        summarize_predictions(np.array([1]), None, [1, 7], 0.5, predicted=np.array([1]))

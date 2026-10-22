@@ -24,20 +24,33 @@ from ml.eval.metrics import (
     run_and_record,
 )
 from ml.eval.scoring import score_feature_sequences, softmax_probabilities
+from timbre.baselines import BASELINE_NAMES
 
 log = get_logger("eval")
 
 
 def summarize_predictions(
     y_true: np.ndarray,
-    probabilities: np.ndarray,
+    probabilities: np.ndarray | None,
     class_ids: list[int],
     abstention_threshold: float = 0.0,
+    *,
+    predicted: np.ndarray | None = None,
 ) -> dict:
     """Return declared classification, calibration, and abstention metrics."""
-    predicted = np.array(class_ids)[probabilities.argmax(axis=1)]
-    confidence = probabilities.max(axis=1)
-    retained = confidence >= abstention_threshold
+    if predicted is None:
+        if probabilities is None:
+            raise ValueError("predictions or probabilities are required")
+        predicted = np.array(class_ids)[probabilities.argmax(axis=1)]
+    if probabilities is None:
+        if abstention_threshold != 0.0:
+            raise ValueError("probabilities are required for confidence-based abstention")
+        confidence = None
+        retained = np.ones(y_true.size, dtype=bool)
+    else:
+        columns = np.array([class_ids.index(int(label)) for label in predicted])
+        confidence = probabilities[np.arange(y_true.size), columns]
+        retained = confidence >= abstention_threshold
     precision, recall, f1, _ = precision_recall_fscore_support(
         y_true,
         predicted,
@@ -62,12 +75,15 @@ def summarize_predictions(
             }
             for index, class_id in enumerate(class_ids)
         },
-        "ece": expected_calibration_error(correct, confidence),
-        "brier": multiclass_brier_score(y_true, probabilities, class_ids),
+        "ece": expected_calibration_error(correct, confidence) if confidence is not None else None,
+        "brier": (
+            multiclass_brier_score(y_true, probabilities, class_ids)
+            if probabilities is not None else None
+        ),
         "confusion_matrix": sklearn_confusion_matrix(
             y_true, predicted, labels=class_ids
         ).tolist(),
-        "abstention_threshold": abstention_threshold,
+        "abstention_threshold": abstention_threshold if probabilities is not None else None,
         "coverage": float(np.mean(retained)),
         "covered_accuracy": (
             float(np.mean(predicted[retained] == y_true[retained])) if retained.any() else None
@@ -116,10 +132,13 @@ def evaluate_baseline(model, clips: list[CachedClip]) -> dict:
     features = aggregate_sequences([clip.features for clip in clips])
     labels = np.array([clip.label for clip in clips])
     started = time.perf_counter()
-    probabilities = model.predict_proba(features)
+    predicted = model.predict(features)
+    probabilities = model.predict_proba(features) if hasattr(model, "predict_proba") else None
     elapsed_ms = (time.perf_counter() - started) * 1000
     class_ids = [int(value) for value in model.classes_]
-    result = summarize_predictions(labels, probabilities, class_ids)
+    result = summarize_predictions(labels, probabilities, class_ids, predicted=predicted)
+    if probabilities is None:
+        result["probability_metrics_unavailable_reason"] = "model does not estimate probabilities"
     result["latency"] = {
         "batch_total_ms": elapsed_ms,
         "mean_per_clip_ms": elapsed_ms / len(clips),
@@ -158,7 +177,8 @@ def evaluate_model(model_dir: Path, run_name: str) -> Path:
         baseline_metadata = json.loads(baseline_metadata_path.read_text())
         if baseline_metadata.get("manifest_sha256") != digest:
             raise ValueError("baseline models do not match the current canonical manifest")
-    for name in ("logistic_regression", "random_forest"):
+        output["baseline_metadata"] = baseline_metadata
+    for name in BASELINE_NAMES:
         path = baseline_dir / f"{name}.joblib"
         if path.exists():
             baseline_models[name] = joblib.load(path)
