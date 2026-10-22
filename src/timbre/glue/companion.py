@@ -5,9 +5,7 @@ emotional posterior. This is glue, NOT the research contribution. Every external
 labelled `# EXTERNAL SERVICE` so the transparency boundary is explicit.
 """
 
-from __future__ import annotations
-
-from timbre.core.types import EmotionPosterior
+from ml.config import EmotionPosterior
 
 # EXTERNAL SERVICE: prompt templates.
 TEMPLATE = (
@@ -40,7 +38,7 @@ def build_system_prompt(posterior: EmotionPosterior) -> str:
 
 async def llm_reply(system_prompt: str, user_text: str) -> str:
     """EXTERNAL SERVICE: use OpenAI first, with optional Gemini fallback."""
-    from timbre.utils.config import settings
+    from ml.config import settings
 
     if settings.llm_provider.lower() != "openai":
         raise ValueError("LLM_PROVIDER must be 'openai'; Gemini is fallback-only")
@@ -61,7 +59,7 @@ async def _openai_reply(system_prompt: str, user_text: str) -> str:
     """EXTERNAL SERVICE: generate a reply through OpenAI's Responses API."""
     from openai import AsyncOpenAI
 
-    from timbre.utils.config import settings
+    from ml.config import settings
 
     client = AsyncOpenAI(api_key=settings.openai_api_key)
     try:
@@ -80,7 +78,7 @@ async def _gemini_reply(system_prompt: str, user_text: str) -> str:
     from google import genai
     from google.genai import types
 
-    from timbre.utils.config import settings
+    from ml.config import settings
 
     # EXTERNAL SERVICE: Google's Gemini Developer API.
     client = genai.Client(api_key=settings.gemini_api_key)
@@ -106,7 +104,7 @@ def tts_speak(text: str, emotion: str = "calm") -> bytes:
 
     import requests
 
-    from timbre.utils.config import settings
+    from ml.config import settings
 
     # Simplistic rate mirroring: stressed -> slower. This is our glue-level design decision.
     rate = 0.95 if emotion in {"stressed", "sad", "fearful"} else 1.0

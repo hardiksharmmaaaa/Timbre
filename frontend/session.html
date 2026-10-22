@@ -57,6 +57,30 @@
 
     <div class="session-content" id="sessionContent" style="display: none;">
       <div class="live-layout">
+        <section class="dashboard-card graph-card">
+          <div class="card-head"><h2>Signal over time</h2><span class="card-badge">LIVE TRACE</span></div>
+          <div class="chart-wrap"><canvas id="moodChart" aria-label="Vocal signal probability history"></canvas></div>
+        </section>
+
+        <aside class="dashboard-card emotion-card" aria-label="Current vocal signal">
+          <div class="card-head"><h2>Current signal</h2><span class="card-badge" id="liveBadge">● PAUSED</span></div>
+          <div class="emotion-body">
+            <div class="ring-wrap">
+              <svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-bg" cx="60" cy="60" r="52"/><circle class="ring-fg" id="ringFg" cx="60" cy="60" r="52"/></svg>
+              <div class="ring-center"><span class="ring-pct" id="confidencePct">—</span><span>confidence</span></div>
+            </div>
+            <div class="emotion-meta">
+              <div class="emotion-label-row"><span class="emotion-icon" id="emotionIcon">◌</span><span class="emotion-label" id="emotionLabel">Awaiting voice</span></div>
+              <div class="emotion-top3" id="emotionTop3" aria-live="polite">—</div>
+              <div class="meta-row"><span>Interval estimate</span><b id="intervalEl">± —</b></div>
+              <div class="meta-row"><span>Windows analysed</span><b id="turnEl">0</b></div>
+              <div class="meta-row"><span>Audio window</span><b id="windowEl">—</b></div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="session-tools">
         <section class="session-hero" aria-labelledby="micState">
           <div class="room-live-meta">
             <span class="live-pill"><i></i> Session live</span>
@@ -74,37 +98,22 @@
           </div>
           <p class="session-boundary">Timbre estimates acoustic patterns, not a person's internal state.</p>
         </section>
-
-        <aside class="dashboard-card emotion-card" aria-label="Current vocal signal">
-          <div class="card-head"><h2>Current signal</h2><span class="card-badge" id="liveBadge">● PAUSED</span></div>
-          <div class="emotion-body">
-            <div class="ring-wrap">
-              <svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-bg" cx="60" cy="60" r="52"/><circle class="ring-fg" id="ringFg" cx="60" cy="60" r="52"/></svg>
-              <div class="ring-center"><span class="ring-pct" id="confidencePct">—</span><span>confidence</span></div>
-            </div>
-            <div class="emotion-meta">
-              <div class="emotion-label-row"><span class="emotion-icon" id="emotionIcon">◌</span><span class="emotion-label" id="emotionLabel">Awaiting voice</span></div>
-              <div class="meta-row"><span>Interval estimate</span><b id="intervalEl">± —</b></div>
-              <div class="meta-row"><span>Windows analysed</span><b id="turnEl">0</b></div>
-              <div class="meta-row"><span>Audio window</span><b id="windowEl">—</b></div>
-            </div>
+        <section class="dashboard-card journal-card">
+          <div class="card-head"><h2>Voice journal</h2><span class="card-badge" id="journalState">READY</span></div>
+          <div class="journal-prompt" id="journalPrompt" aria-live="polite">
+            <div class="prompt-icon" aria-hidden="true">✦</div>
+            <p class="prompt-text" id="promptText">Your reflection prompt will appear here based on your vocal signal.</p>
+            <button class="prompt-swap" id="nextPromptBtn" type="button" aria-label="Show another reflection prompt">↻</button>
           </div>
-        </aside>
-      </div>
-
-      <div class="session-tools">
-        <section class="dashboard-card graph-card">
-          <div class="card-head"><h2>Signal over time</h2><span class="card-badge">LIVE TRACE</span></div>
-          <div class="chart-wrap"><canvas id="moodChart" aria-label="Vocal signal probability history"></canvas></div>
-        </section>
-        <section class="dashboard-card chat-card">
-          <div class="card-head"><h2>Conversation</h2><span class="card-badge" id="chatState">IDLE</span></div>
-          <div class="chat-log" id="log" aria-live="polite"><div class="chat-empty" id="chatEmpty"><span>◎</span><p>Speak, inspect the signal, then write what is on your mind.</p></div></div>
-          <form class="chat-form" id="chatForm">
-            <label class="sr-only" for="userText">Message Timbre</label>
-            <input class="chat-input" id="userText" type="text" placeholder="Write a message…" autocomplete="off" />
-            <button class="send-btn" id="sendBtn" type="submit" disabled aria-label="Send message">Send <span>↗</span></button>
-          </form>
+          <div class="journal-controls">
+            <button class="journal-record-btn" id="journalRecordBtn" type="button" aria-label="Record reflection" disabled>
+              <span class="record-ring" aria-hidden="true"></span>
+              <span class="record-icon" aria-hidden="true">●</span>
+              <span class="record-label">Record reflection</span>
+            </button>
+            <div class="journal-timer" id="journalTimer" hidden>00:00</div>
+          </div>
+          <div class="journal-entries" id="journalEntries" aria-label="Session reflections"></div>
         </section>
       </div>
 

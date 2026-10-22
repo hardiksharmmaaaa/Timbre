@@ -11,7 +11,7 @@ import time
 import uuid
 from pathlib import Path
 
-from timbre.core.types import EmotionPosterior, SessionLogPoint
+from ml.config import EmotionPosterior, SessionLogPoint
 
 SESSION_DIR = Path(__file__).resolve().parents[3] / "data" / "mood_sessions"
 

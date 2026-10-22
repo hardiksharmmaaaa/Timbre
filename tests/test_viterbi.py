@@ -8,7 +8,7 @@ import itertools
 
 import numpy as np
 
-from timbre.hmm.decoder import score_viterbi_sequences, viterbi_decode
+from ml.core.hmm.decoder import score_viterbi_sequences, viterbi_decode
 
 
 class _TinyModel:

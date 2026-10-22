@@ -16,48 +16,47 @@ Timbre/
 ├── .env.example              # required env vars (copy to .env, never commit)
 ├── .gitignore
 ├── README.md
-├── AGENTS.md                 # agent instruction file (source of truth for design)
-├── DESIGN.md                 # this file
-├── docs/                     # report + research notes (markdown)
+├── docs/                     # report, research notes, and REPOSITORY_MAP.md
 ├── data/                     # gitignored
 │   ├── raw/                  # downloaded datasets (RAVDESS, CREMA-D, TESS)
 │   ├── processed/            # extracted feature arrays per clip (.npz)
 │   └── splits/               # seeded train/val/test index files (.json)
 ├── models/                   # gitignored; serialized pipeline artifacts (.joblib/.pkl)
 ├── experiments/              # reproducible run logs, notebooks, ablation outputs
-├── src/timbre/               # the Python package (see §2)
+├── ml/                       # all ML data/core/training/evaluation code (see §2)
+├── src/timbre/               # application API and LLM/session glue only
 ├── frontend/                 # static HTML/JS app (mic + mood graph)
-├── scripts/                  # top-level CLI entrypoints (download, train, evaluate, serve)
+├── scripts/                  # engineering utilities (tracker and guarded shipping)
 └── tests/                    # pytest suite
 ```
 
-## 2. Python package — `src/timbre/`
+## 2. Source-package boundaries
 
-Each submodule maps to a pipeline stage. The **perception core** (stages that are the
-student's own ML contribution) is explicitly separated from **glue** (off-the-shelf LLM/TTS).
+The **perception core** (stages that are the student's own ML contribution) lives entirely in
+`ml/`. Application glue is intentionally isolated in `src/timbre/`.
 
 | Module | Pipeline stage | Ownership | Responsibility |
 |--------|----------------|-----------|----------------|
-| `features/` | 1 | **Built by me** | framewise feature extraction (F0, RMS, MFCCs, voiced proportion) |
-| `reduction/` | 2 | **Built by me** | PCA + LLE dimensionality reduction, fit/transform |
-| `hmm/` | 3 | **Built by me** | HMM (emission/transition) + hand-written Viterbi decoder |
-| `bayesian/` | 4 | **Built by me** | MCMC/VI posterior over emotion states + credible intervals |
-| `glue/` | 5–7 | off-the-shelf | LLM prompt injection + TTS API + mood log persistence |
-| `api/` | — | glue | FastAPI app: streaming endpoint, /health, /emotion, model loading |
-| `core/` | — | shared | types/dataclasses shared across stages (FeatureFrame, EmotionState) |
-| `eval/` | — | **Built by me** | accuracy, confusion matrix, calibration, ablations |
-| `utils/` | — | shared | paths, config loading, logging, seeds |
+| `ml/core/features/` | 1 | **Built by me** | framewise feature extraction (F0, RMS, MFCCs, voiced proportion) |
+| `ml/core/reduction/` | 2 | **Built by me** | PCA + LLE dimensionality reduction, fit/transform |
+| `ml/core/hmm/` | 3 | **Built by me** | HMM (emission/transition) + hand-written Viterbi decoder |
+| `ml/core/bayesian/` | 4 | **Built by me** | posterior over emotion states + credible intervals |
+| `ml/core/pipeline/` | 1–4 | **Built by me** | serving composition of the perception stages |
+| `ml/data/`, `ml/training/`, `ml/eval/`, `ml/config/` | ML workflow | **Built by me** | data lineage, experiments, metrics, and reproducibility |
+| `src/timbre/glue/` | 5–7 | off-the-shelf | LLM prompt injection + TTS API + mood log persistence |
+| `src/timbre/api/` | — | glue | FastAPI app: streaming endpoint, health check, model loading |
 
 Rules:
-- `features`, `reduction`, `hmm`, `bayesian`, `eval` contain **no API/network calls** — pure
+- `ml/core/` and `ml/eval/` contain **no API/network calls** — pure
   computation, fully unit-testable.
-- `glue` and `api` may call external services but must **never** import-claim them as research.
+- `src/timbre/glue/` and `src/timbre/api/` may call external services but must **never**
+  import-claim them as research.
 - Every public function in the "built by me" modules carries a leading docstring noting whether
   it is hand-implemented or wraps a library.
 
 ## 3. Core data model (shared types)
 
-`src/timbre/core/types.py`:
+`ml/config/types.py`:
 
 - `FrameFeatures`: a single frame's feature vector (np.ndarray) + timestamp.
 - `Clip`: raw audio path + parsed emotion label + feature matrix (nframes × nfeatures).
@@ -95,9 +94,9 @@ regardless of whether the archive contains an `Audio_Speech` parent directory.
 - Personal/native-language test set lives as its own split json and is excluded from training.
 
 ### 4.4 Repro wiring
-- `scripts/download_data.py` — downloads RAVDESS (Zenodo) / TESS / CREMA-D, verifies hashes.
-- `scripts/extract_features.py` — reads raw → writes `data/processed`.
-- `scripts/make_splits.py` — writes `data/splits/*.json` with the fixed seed.
+- `ml/data/download.py` — downloads RAVDESS (Zenodo) / TESS / CREMA-D, verifies hashes.
+- `ml/training/extract_features.py` — reads raw → writes `data/processed`.
+- `ml/training/make_splits.py` — writes `data/splits/*.json` with the fixed seed.
 - A `Makefile` target chains them in order. **Do not run extraction on raw audio more than
   once** — the processed `.npz` cache is the source for all downstream training.
 
@@ -145,7 +144,7 @@ Hand-written scoring + visualizations, all deterministic:
   calibration error (ECE). This is the "does 72% ≈ 72%?" test.
 - **Ablations**: PCA vs. LLE; ±Bayesian layer; ±Kalman smoothing; HMM vs. logistic-regression
   vs. random-forest vs. KNN vs. AdaBoost vs. SVM baselines.
-- Script: `scripts/evaluate.py` → writes figures + metrics into `experiments/<run>/`.
+- Script: `ml/training/evaluate.py` → writes figures + metrics into `experiments/<run>/`.
 
 ### 6.1 KNN baseline selection
 
@@ -222,13 +221,13 @@ Endpoints:
 ## 9. Developer commands (Makefile)
 ```make
 setup        # python -m venv .venv && pip install -e ".[dev]"
-data-download # scripts/download_data.py
-data-extract  # scripts/extract_features.py
-data-split    # scripts/make_splits.py
-train         # scripts/train.py            -> models/
-train-baselines # scripts/train_baselines.py -> models/baselines/ (KNN + AdaBoost + SVM CV)
+data-download # ml/data/download.py
+data-extract  # ml/training/extract_features.py
+data-split    # ml/training/make_splits.py
+train         # ml/training/train.py            -> models/
+train-baselines # ml/training/train_baselines.py -> models/baselines/ (KNN + AdaBoost + SVM CV)
 train-all     # readiness -> baselines -> HMM -> validation calibration
-evaluate      # scripts/evaluate.py          -> experiments/<run>/
+evaluate      # ml/training/evaluate.py          -> experiments/<run>/
 serve         # uvicorn timbre.api.main:app  (serves frontend too)
 lint          # ruff check .
 typecheck     # (none yet; optionally mypy)
@@ -241,7 +240,7 @@ All commands run from repo root. Python 3.10+.
 - `.env` (from `.env.example`): `RAVDESS_URL`, `CREMA_URL`, `TESS_URL`, `OPENAI_API_KEY`,
   optional `GEMINI_API_KEY`, provider model names, `TTS_API_KEY`, `TTS_VOICE_ID`, `SEED`,
   `LOG_LEVEL`.
-- All defaults in `src/timbre/utils/config.py` (pydantic-settings); overridable via env.
+- All defaults in `ml/config/config.py` (pydantic-settings); overridable via env.
 - `.gitignore`: `data/`, `models/`, `.env`, `*.npz`, `*.wav`, `*.joblib`, `experiments/`,
   `.venv/`, `__pycache__/`.
 

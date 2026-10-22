@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from timbre.utils.config import Settings
+from ml.config import Settings
 
 
 @pytest.mark.parametrize(

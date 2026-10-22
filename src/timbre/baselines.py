@@ -11,8 +11,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 
-from timbre.data.cache import CachedClip
-from timbre.features.aggregation import aggregate_sequences
+from ml.core.features.aggregation import aggregate_sequences
+from ml.data.cache import CachedClip
 
 BASELINE_NAMES = ("logistic_regression", "random_forest", "knn", "adaboost", "svm")
 KNN_NEIGHBOR_COUNTS = (1, 3, 5, 7, 11, 15, 21, 31)

@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from timbre.features.augmentation import apply_reverb, select_rir
+from ml.core.features.augmentation import apply_reverb, select_rir
 
 
 def test_reverb_preserves_length_is_finite_and_avoids_clipping():

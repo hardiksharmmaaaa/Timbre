@@ -1,7 +1,7 @@
 """Tests for deterministic, speaker-independent RAVDESS splitting."""
 
-from scripts.make_splits import split_by_actor
-from timbre.utils.common import parse_ravdess_actor
+from ml.config import parse_ravdess_actor
+from ml.training.make_splits import split_by_actor
 
 
 def _clips() -> list[tuple[str, int, int]]:

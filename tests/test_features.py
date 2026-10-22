@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from timbre.features.extractor import extract_frame_features, frame_lengths, load_and_extract
+from ml.core.features.extractor import extract_frame_features, frame_lengths, load_and_extract
 
 
 def test_frame_lengths_follow_input_sample_rate():

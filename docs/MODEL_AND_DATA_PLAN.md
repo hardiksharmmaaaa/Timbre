@@ -650,7 +650,7 @@ Important remaining gaps are:
 4. The TTS function is a generic HTTP placeholder rather than a complete provider integration.
 5. Heuristic uncertainty intervals are not validated credible intervals; only the fitted class
    probabilities can be evaluated for calibration after training.
-6. `scripts/download_data.py` remains a ZIP helper and is not the supported CREMA-D Git LFS
+6. `ml/data/download.py` remains a ZIP helper and is not the supported CREMA-D Git LFS
    acquisition path.
 
 These gaps must remain visible until their exit criteria have actually passed.

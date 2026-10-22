@@ -2,12 +2,13 @@
 
 ## Project Structure & Module Organization
 
-Application code lives in `src/timbre/`. The student-built perception pipeline is divided
-into `features/`, `reduction/`, `hmm/`, `bayesian/`, and `eval/`; these modules must remain
-free of network calls. External LLM and TTS integrations belong only in `glue/`, while
-FastAPI endpoints live in `api/`. Command-line workflows are in `scripts/`, browser assets
-are in `frontend/`, tests are in `tests/`, and research notes are in `docs/`. Treat
-`DESIGN.md` as the detailed architecture specification.
+Application code lives in `src/timbre/`. The student-built perception pipeline lives entirely
+in `ml/`: `core/features/`, `core/reduction/`, `core/hmm/`, `core/bayesian/`, and `eval/`
+must remain free of network calls. External LLM and TTS integrations belong only in
+`src/timbre/glue/`, while FastAPI endpoints live in `src/timbre/api/`. Engineering-only
+utilities are in `scripts/`, browser assets are in `frontend/`, tests are in `tests/`, and
+research notes are in `docs/`. Treat `DESIGN.md` and `REPOSITORY_MAP.md` as the architecture
+specification.
 
 ## Build, Test, and Development Commands
 

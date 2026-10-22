@@ -10,10 +10,10 @@ import pytest
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.preprocessing import StandardScaler
 
-from scripts import evaluate, train_baselines
+from ml.core.features.aggregation import aggregate_sequences
+from ml.data.cache import CachedClip
+from ml.training import evaluate, train_baselines
 from timbre.baselines import fit_adaboost, fit_knn, fit_svm
-from timbre.data.cache import CachedClip
-from timbre.features.aggregation import aggregate_sequences
 
 
 @pytest.fixture

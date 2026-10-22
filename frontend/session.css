@@ -45,14 +45,62 @@
 .session-page .emotion-card { display: flex; flex-direction: column; }
 .session-page .emotion-body { flex: 1; min-height: 0; grid-template-columns: 1fr; justify-items: center; align-content: center; padding: 36px; }
 .session-page .emotion-meta { width: 100%; }
+.session-page .emotion-top3 { margin: -18px 0 22px; font: 500 10px/1.6 var(--mono); letter-spacing: .04em; color: #8b8781; text-align: center; }
+.session-page .emotion-top3.is-low-confidence { color: #b08a4f; }
 .session-page .ring-wrap { width: 205px; height: 205px; margin-bottom: 36px; }
 .session-page .card-head { height: 68px; }.session-page .card-head h2 { margin: 0; font-size: 13px; font-weight: 500; }
 .session-page .live-badge { color: var(--orange); }
 
 .session-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
 .session-page .dashboard-card { border-radius: 18px; background: rgba(16,16,17,.82); }
-.session-page .chat-card { margin-top: 0; }
-.session-page .chat-log { height: 300px; min-height: 300px; }
+
+/* Signal over time fills the tall left cell of the live layout */
+.session-page .live-layout .graph-card { display: flex; flex-direction: column; }
+.session-page .live-layout .chart-wrap { flex: 1; height: auto; min-height: 360px; }
+
+/* Hero headline card sits in the lower row, beside the voice journal */
+.session-tools .session-hero { min-height: 470px; padding: 44px 40px; }
+.session-tools .mic-state { font-size: clamp(38px, 3.4vw, 56px); }
+.session-tools .session-boundary { right: 24px; bottom: 22px; width: 180px; }
+.session-page .journal-card { margin-top: 0; }
+.session-page .journal-prompt { min-height: 120px; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.02); display: flex; align-items: flex-start; gap: 14px; }
+.session-page .prompt-icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; background: linear-gradient(135deg, rgba(255,92,26,.15), rgba(123,97,255,.1)); color: var(--orange); font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+.session-page .prompt-text { margin: 0; color: #b9b6b0; font-size: 14px; line-height: 1.6; }
+.session-page .prompt-swap { margin-left: auto; align-self: flex-start; width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; color: #86837e; background: rgba(255,255,255,.03); cursor: pointer; font-size: 13px; transition: border-color .2s, color .2s, transform .3s; flex-shrink: 0; }
+.session-page .prompt-swap:hover { border-color: rgba(255,92,26,.5); color: var(--orange); transform: rotate(90deg); }
+.session-page .journal-controls { display: flex; align-items: center; gap: 16px; margin-top: 16px; padding-bottom: 24px; }
+.session-page .journal-record-btn { position: relative; width: 68px; height: 68px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.12); border-radius: 50%; color: var(--paper); background: #1a1a1c; cursor: pointer; transition: border-color .2s, background .2s; }
+.session-page .journal-record-btn:hover:not(:disabled) { border-color: rgba(255,92,26,.5); background: rgba(255,92,26,.1); }
+.session-page .journal-record-btn:disabled { opacity: .45; cursor: not-allowed; }
+.session-page .journal-record-btn.recording { border-color: var(--orange); background: var(--orange); color: #06231f; }
+.session-page .journal-record-btn.recording .record-ring { animation: record-pulse 1.5s ease-out infinite; }
+.session-page .record-ring { position: absolute; inset: -4px; border: 2px solid var(--orange); border-radius: 50%; opacity: 0; }
+.session-page .record-icon { font-size: 18px; }
+.session-page .record-label { position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); white-space: nowrap; font: 500 9px var(--mono); text-transform: uppercase; letter-spacing: .04em; color: #86837e; }
+.session-page .journal-record-btn.recording .record-label { color: var(--orange); }
+.session-page .journal-timer { font-variant-numeric: tabular-nums; font-family: var(--mono); color: var(--orange); font-size: 14px; font-weight: 500; }
+.session-page .journal-entries { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; max-height: 320px; overflow-y: auto; }
+.session-page .journal-entry { padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.02); display: flex; align-items: flex-start; gap: 12px; animation: journal-enter .3s ease-out; }
+.session-page .journal-entry.playing { border-color: rgba(255,92,26,.4); background: rgba(255,92,26,.05); }
+.session-page .entry-meta { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; width: 56px; }
+.session-page .entry-time { color: #686660; font: 8px var(--mono); }
+.session-page .entry-play { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.14); border-radius: 8px; color: #b9b6b0; background: #151517; cursor: pointer; transition: border-color .2s, color .2s; }
+.session-page .entry-play:hover { border-color: var(--orange); color: var(--orange); }
+.session-page .entry-play.playing { border-color: var(--orange); color: #06231f; background: var(--orange); }
+.session-page .entry-content { flex: 1; min-width: 0; }
+.session-page .entry-prompt { color: #86837e; font: 8px var(--mono); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.session-page .entry-waveform { width: 100%; height: 28px; background: rgba(255,255,255,.03); border-radius: 6px; position: relative; }
+.session-page .entry-waveform canvas { width: 100%; height: 100%; display: block; }
+.session-page .journal-entries:empty::before { content: "◌  Reflections you record will collect here for this session."; display: block; padding: 32px 16px; color: #686660; text-align: center; font: 9px/1.7 var(--mono); text-transform: uppercase; letter-spacing: .05em; border: 1px dashed rgba(255,255,255,.08); border-radius: 10px; }
+
+@keyframes journal-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes record-pulse {
+  0% { transform: scale(1); opacity: .6; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
 .session-page .chart-wrap { height: 360px; }
 
 .session-controls { position: sticky; z-index: 40; bottom: 20px; width: max-content; max-width: calc(100vw - 40px); min-height: 72px; margin: 24px auto 0; padding: 9px 10px 9px 12px; display: flex; align-items: center; gap: 12px; border: 1px solid rgba(255,255,255,.16); border-radius: 18px; background: rgba(18,18,19,.92); box-shadow: 0 20px 70px rgba(0,0,0,.55); backdrop-filter: blur(24px); }
@@ -86,7 +134,7 @@
   .session-page .session-screen-inner { padding-top: 55px; }.prejoin-kicker { margin-bottom: 48px; }.session-page .session-title { font-size: 43px; }.prejoin-notes { flex-direction: column; gap: 12px; }
   .session-page .session-hero { min-height: 540px; padding: 28px 22px; }.voice-presence { width: 240px; height: 240px; top: 39%; }.session-page .mic-state { font-size: 42px; }.session-boundary { display: none; }
   .session-page .emotion-body { grid-template-columns: 1fr; }.session-page .ring-wrap { width: 175px; height: 175px; margin-bottom: 28px; }
-  .session-page .chart-wrap { height: 290px; padding: 12px; }.session-page .chat-log { height: 250px; min-height: 250px; }
+  .session-page .chart-wrap { height: 290px; padding: 12px; }.session-page .journal-entries { max-height: 250px; }
   .session-controls { bottom: 10px; }.control-session-label { display: none; }.control-btn small { position: static; width: auto; margin-left: 7px; }.control-btn { width: auto; min-width: 104px; grid-template-columns: auto auto; padding: 0 14px; }.end-session-btn { padding-inline: 14px; }
   .ended-actions { flex-direction: column; }
 }
